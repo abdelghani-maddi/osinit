@@ -1,0 +1,10 @@
+name: openit
+title:
+username: amcm
+account: amcm
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14247395
+bundleId: 10000353
+url: https://amcm.shinyapps.io/openit/
+version: 1
