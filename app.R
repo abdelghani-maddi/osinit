@@ -327,6 +327,26 @@ ui <- dashboardPage(
   )
 )
 
+# # Ajout de l'icône dans la section head
+# ui <- tagList(
+#   tags$head(
+#     tags$title("OS Initiatives Dashboard")
+#   ),
+#   tags$a("🌐 OS Initiatives", href = "https://www.gemass.fr/contract/openit/", 
+#          style = "font-size: 20px; text-decoration: none; margin-left: 10px;"),
+#   ui
+# )
+
+
+ui <- tagList(
+  tags$head(
+    tags$link(rel = "icon", type = "image/png", href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
+    tags$title("OS Initiatives Dashboard")
+  ),
+  ui
+)
+
+
 
 #######################
 # Server part
