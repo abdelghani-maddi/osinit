@@ -22,6 +22,7 @@ library(cartogram)  # For cartogram maps
 library(ggforce)  # For advanced plotting with ggplot2
 library(leaflet)  # For interactive maps
 library(htmltools)  # For HTML tools in Shiny
+library(explor)
 
 #######################
 # Set up Shiny app credentials
@@ -102,8 +103,12 @@ data_pie <- data_pie %>% select(-any_of("0"))  # Remove any column named "0" (if
 # Function to perform MCA (Correspondence Analysis)
 perform_mca <- function(data) {
   d <- data %>%
-    select(Nonprofit, OpenSource, Category, CommunityGovernance) %>%
+    select(OrgName2, Nonprofit, Category, CommunityGovernance) %>%
     mutate(across(everything(), as.factor))  # Convert columns to factors for MCA
+ 
+row.names(d) <- d$OrgName2
+
+d <- d %>% select(-OrgName2)
   
   acm <- dudi.acm(d, scannf = FALSE, nf = Inf)  # Perform MCA (ACM in R)
   list(acm = acm, d = d)  # Return results
@@ -279,23 +284,47 @@ ui <- dashboardPage(
       # MCA & Clustering analysis page
       tabItem(tabName = "mca",
               fluidRow(
-                column(
-                  title = "Multiple Correspondence Analysis (MCA)",
+                # column(
+                #   title = "Multiple Correspondence Analysis (MCA)",
+                #   status = "primary",
+                #   solidHeader = TRUE,
+                #   width = 6,
+                #   plotlyOutput("mca_plot"),  # MCA plot output
+                #   
+                #   tags$p(
+                #     "This plot shows the results of a Multiple Correspondence Analysis (MCA), which visualizes the relationships between different characteristics of open science initiatives. Each point represents an initiative, and the colors differentiate initiatives based on community governance."
+                #   )
+                #),
+                box(
+                      title = "Multiple Correspondence Analysis (MCA): NonProfit",
+                      status = "primary",
+                      solidHeader = TRUE,
+                      width = 12,
+                      uiOutput("mca_plot_ui"),  # Utilisation d'uiOutput pour afficher le plot explor
+                      
+                      tags$p(
+                        "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives. Each point represents an initiative, and the colors indicate whether the initiative is a nonprofit or not, highlighting potential differences in their positioning along these two axes."
+                      )
+                    ),
+                
+                box(
+                  title = "Multiple Correspondence Analysis (MCA): Category",
                   status = "primary",
                   solidHeader = TRUE,
-                  width = 6,
-                  plotlyOutput("mca_plot"),  # MCA plot output
+                  width = 12,
+                  uiOutput("mca_plot_ui2"),  # Utilisation d'uiOutput pour afficher le plot explor
+                  
                   tags$p(
-                    "This plot shows the results of a Multiple Correspondence Analysis (MCA), which visualizes the relationships between different characteristics of open science initiatives. Each point represents an initiative, and the colors differentiate initiatives based on community governance."
+                    "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions. Each point represents an open science initiative, and the colors differentiate the initiatives based on their category (e.g., open-source, community-driven). This visualization helps to explore how the category influences the distribution of initiatives in the multidimensional space."
                   )
                 ),
                 
                 # Column to display the hierarchical clustering dendrogram
-                column(
+                box(
                   title = "Hierarchical Clustering Dendrogram",
                   status = "danger",
                   solidHeader = TRUE,
-                  width = 6,
+                  width = 12,
                   plotlyOutput("dendrogram"),  # Dendrogram plot output
                   tags$p(
                     "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. The clusters provide insight into how similar initiatives group together based on shared attributes."
@@ -337,7 +366,7 @@ ui <- dashboardPage(
 #   ui
 # )
 
-
+# # Ajout de l'icône dans la section head
 ui <- tagList(
   tags$head(
     tags$link(rel = "icon", type = "image/png", href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
@@ -519,14 +548,63 @@ server <- function(input, output, session) {
               zoom = 2)  # Set the initial map view and zoom level
   })    
   
-  # Render the MCA plot (Multiple Correspondence Analysis) using ggplotly
-  output$mca_plot <- renderPlotly({
-    data <- data_reactive()  # Get the most recent data
+  # # Render the MCA plot (Multiple Correspondence Analysis) using ggplotly
+  # output$mca_plot <- renderPlotly({
+  #   data <- data_reactive()  # Get the most recent data
+  #   
+  #   # Create a MCA plot using fviz_mca_ind
+  #   p1 <- fviz_mca_ind(acm, geom = "point", alpha.ind = .25, habillage = mca_results$d$CommunityGovernance, addEllipses = TRUE, repel = TRUE) +
+  #     theme_minimal()  # Use a minimal theme for the plot
+  #   ggplotly(p1)  # Convert the ggplot to a Plotly interactive plot
+  # })
+  
+
+  # Perform MCA once (using your existing data processing)
+  mca_results <- reactive({
+    perform_mca(data_reactive())  # Utilise ta fonction existante pour calculer l'ACM
+  })
+  
+  # Préparation et affichage du graphique avec les bonnes étiquettes
+  output$mca_plot_ui <- renderUI({
+    acm_object <- mca_results()$acm   # Récupérer l'objet ACM
+    d <- mca_results()$d  # Récupérer les données originales utilisées pour l'ACM
     
-    # Create a MCA plot using fviz_mca_ind
-    p1 <- fviz_mca_ind(acm, geom = "point", alpha.ind = .25, habillage = mca_results$d$CommunityGovernance, addEllipses = TRUE) +
-      theme_minimal()  # Use a minimal theme for the plot
-    ggplotly(p1)  # Convert the ggplot to a Plotly interactive plot
+    # Ajouter les noms de lignes ou une colonne pour étiqueter les points
+    rownames(acm_object$li) <- rownames(d)  # Associer les étiquettes d'origine aux points
+    
+    # Convertir l'objet ACM pour explor avec les étiquettes
+    res <- prepare_results(acm_object)
+    
+    # Affichage interactif avec les étiquettes correctes
+    MCA_ind_plot(res, 
+                         xax = 1, yax = 2, ind_sup = FALSE, lab_var = "Lab",
+                         ind_lab_min_contrib = 0, col_var = "Nonprofit", 
+                         labels_size = 7, point_opacity = 0.5, 
+                         opacity_var = NULL, point_size = 64, ellipses = FALSE,
+                         transitions = TRUE, labels_positions = "auto", 
+                         xlim = c(-2.27, 2.39), ylim = c(-1.46, 1.5))
+  })
+  
+  
+  # Préparation et affichage du graphique avec les bonnes étiquettes
+  output$mca_plot_ui2 <- renderUI({
+    acm_object <- mca_results()$acm   # Récupérer l'objet ACM
+    d <- mca_results()$d  # Récupérer les données originales utilisées pour l'ACM
+    
+    # Ajouter les noms de lignes ou une colonne pour étiqueter les points
+    rownames(acm_object$li) <- rownames(d)  # Associer les étiquettes d'origine aux points
+    
+    # Convertir l'objet ACM pour explor avec les étiquettes
+    res <- explor::prepare_results(acm_object)
+    
+    # Affichage interactif avec les étiquettes correctes
+    MCA_ind_plot(res, 
+                         xax = 1, yax = 2, ind_sup = FALSE, lab_var = "Lab",
+                         ind_lab_min_contrib = 0, col_var = "Category", 
+                         labels_size = 7, point_opacity = 0.5, 
+                         opacity_var = NULL, point_size = 64, ellipses = FALSE,
+                         transitions = TRUE, labels_positions = "auto", 
+                         xlim = c(-2.27, 2.39), ylim = c(-1.46, 1.5))
   })
   
   # Render the dendrogram (cluster analysis) plot
@@ -550,7 +628,6 @@ server <- function(input, output, session) {
 
 # To deploy the app locally
 shinyApp(ui = ui, server = server)
-
 
 # To deploy the app online
 # rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
