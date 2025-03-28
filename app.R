@@ -219,9 +219,17 @@ ui <- dashboardPage(
                     tags$a(
                       href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=998126494",
                       target = "_blank",
-                      "🔗 Access and Enrich Data",
+                      "🔗 Access and Download Data",
                       style = "color: #ffffff; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px; 
                                background-color: #007bff; border-radius: 10px; font-size: 16px;"
+                    ),
+                    
+                    tags$a(
+                      href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
+                      target = "_blank",
+                      "🔗 Add Initiatives and Enrich Data",
+                      style = "color: #0c0c0d; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px; 
+                               background-color: #6aff00; border-radius: 10px; font-size: 16px;"
                     )
                   )
                 ),
