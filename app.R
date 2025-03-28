@@ -173,6 +173,11 @@ ui <- dashboardPage(
       # Menu item for MCA & Clustering analysis
       menuItem("MCA & Clustering", tabName = "mca", icon = icon("chart-bar")),
       
+      
+      # Menu item for "About" Page
+      menuItem("About", tabName = "about", icon = icon("info-circle")),
+      
+      
       # Add a clickable logo that redirects to an external link
       tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
@@ -284,17 +289,6 @@ ui <- dashboardPage(
       # MCA & Clustering analysis page
       tabItem(tabName = "mca",
               fluidRow(
-                # column(
-                #   title = "Multiple Correspondence Analysis (MCA)",
-                #   status = "primary",
-                #   solidHeader = TRUE,
-                #   width = 6,
-                #   plotlyOutput("mca_plot"),  # MCA plot output
-                #   
-                #   tags$p(
-                #     "This plot shows the results of a Multiple Correspondence Analysis (MCA), which visualizes the relationships between different characteristics of open science initiatives. Each point represents an initiative, and the colors differentiate initiatives based on community governance."
-                #   )
-                #),
                 box(
                       title = "Multiple Correspondence Analysis (MCA): NonProfit",
                       status = "primary",
@@ -351,10 +345,24 @@ ui <- dashboardPage(
                   )
                 )
               )
+              
+      ),
+      # "About" tab
+      # Ajout de l'onglet About
+      tabItem(tabName = "about",
+              fluidRow(
+                box(
+                  title = "About this Project", status = "primary", solidHeader = TRUE,
+                  width = 12,
+                  div(style = "white-space: pre-wrap;",
+                      paste(readLines("About.txt"), collapse = "\n"))
+                )
+                
+              )
       )
     )
+    )
   )
-)
 
 # # Ajout de l'icône dans la section head
 # ui <- tagList(
@@ -383,7 +391,7 @@ ui <- tagList(
 
 
 server <- function(input, output, session) {
-  
+
   # Rendering the logo image in the UI
   output$logo_image <- renderImage({
     list(src = "www/logo.png",  # Path to the logo image
