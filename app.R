@@ -44,9 +44,9 @@ gs4_auth(path = file.path(getwd(), "cle.json"))
 #######################
 # Define a function to download data from a Google Sheets URL
 download_data <- function() {
-  sheet_url <- "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?usp=sharing"
+  sheet_url <- "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1136935931#gid=1136935931" # "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=0#gid=0"
   read_sheet(sheet_url) %>%
-    filter(!(adm0_a3 == "NA") & !is.na(Country)) %>%
+    #filter(!(adm0_a3 == "NA") & !is.na(Country)) %>%
     as.data.frame()
 }
 
@@ -104,6 +104,8 @@ data_pie <- data_pie %>% select(-any_of("0"))  # Remove any column named "0" (if
 perform_mca <- function(data) {
   d <- data %>%
     select(OrgName2, Nonprofit, Category, CommunityGovernance) %>%
+#    select(OrgName2, Nonprofit, audience, Focus, Category, CommunityGovernance) %>%
+    
     mutate(across(everything(), as.factor))  # Convert columns to factors for MCA
  
 row.names(d) <- d$OrgName2
@@ -130,7 +132,7 @@ arbre_phi2 <- perform_clustering(acm)
 #######################
 # Assign Clusters Based on Hierarchical Clustering
 #######################
-data$cluster <- cutree(arbre_phi2, 5)  # Cut the dendrogram into 5 clusters
+data$cluster <- cutree(arbre_phi2, 4)  # Cut the dendrogram into 5 clusters
 
 #######################
 # Update Google Sheets with the Cluster Data
@@ -173,6 +175,11 @@ ui <- dashboardPage(
       # Menu item for MCA & Clustering analysis
       menuItem("MCA & Clustering", tabName = "mca", icon = icon("chart-bar")),
       
+      
+      # Menu item for "About" Page
+      menuItem("About", tabName = "about", icon = icon("info-circle")),
+      
+      
       # Add a clickable logo that redirects to an external link
       tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
@@ -212,11 +219,19 @@ ui <- dashboardPage(
                     ),
                     # Clickable link to access and enrich the data
                     tags$a(
-                      href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=998126494",
+                      href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1136935931#gid=1136935931",
                       target = "_blank",
-                      "🔗 Access and Enrich Data",
+                      "🔗 Access and Download Data",
                       style = "color: #ffffff; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px; 
                                background-color: #007bff; border-radius: 10px; font-size: 16px;"
+                    ),
+                    
+                    tags$a(
+                      href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
+                      target = "_blank",
+                      "🔗 Add Initiatives and Enrich Data",
+                      style = "color: #0c0c0d; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px; 
+                               background-color: #6aff00; border-radius: 10px; font-size: 16px;"
                     )
                   )
                 ),
@@ -284,17 +299,6 @@ ui <- dashboardPage(
       # MCA & Clustering analysis page
       tabItem(tabName = "mca",
               fluidRow(
-                # column(
-                #   title = "Multiple Correspondence Analysis (MCA)",
-                #   status = "primary",
-                #   solidHeader = TRUE,
-                #   width = 6,
-                #   plotlyOutput("mca_plot"),  # MCA plot output
-                #   
-                #   tags$p(
-                #     "This plot shows the results of a Multiple Correspondence Analysis (MCA), which visualizes the relationships between different characteristics of open science initiatives. Each point represents an initiative, and the colors differentiate initiatives based on community governance."
-                #   )
-                #),
                 box(
                       title = "Multiple Correspondence Analysis (MCA): NonProfit",
                       status = "primary",
@@ -351,10 +355,24 @@ ui <- dashboardPage(
                   )
                 )
               )
+              
+      ),
+      # "About" tab
+      # Ajout de l'onglet About
+      tabItem(tabName = "about",
+              fluidRow(
+                box(
+                  title = "About this Project", status = "primary", solidHeader = TRUE,
+                  width = 12,
+                  div(style = "white-space: pre-wrap;",
+                      paste(readLines("About.txt"), collapse = "\n"))
+                )
+                
+              )
       )
     )
+    )
   )
-)
 
 # # Ajout de l'icône dans la section head
 # ui <- tagList(
@@ -383,7 +401,7 @@ ui <- tagList(
 
 
 server <- function(input, output, session) {
-  
+
   # Rendering the logo image in the UI
   output$logo_image <- renderImage({
     list(src = "www/logo.png",  # Path to the logo image
@@ -405,93 +423,194 @@ server <- function(input, output, session) {
   })
   
   
-  # Creating an interactive Plotly bar chart to show the number of initiatives by category
+  # # Creating an interactive Plotly bar chart to show the number of initiatives by category
+  # output$category_plot <- renderPlotly({
+  #   data <- data_reactive()  # Get the most recent data
+  #   
+  #   # Count the number of initiatives per category for the Y-axis
+  #   category_count <- data %>%
+  #     group_by(Category) %>%
+  #     summarise(count = n(), .groups = "drop")  # Group by Category and count the number of occurrences
+  #   # Tri des catégories par ordre décroissant
+  #   category_count <- category_count %>%
+  #     arrange(desc(count)) %>%
+  #     mutate(
+  #       Category = factor(Category, levels = unique(Category)),  # pour le tri des couleurs
+  #       Category_label = str_wrap(as.character(Category), width = 15),
+  #       Category_label = factor(Category_label, levels = unique(Category_label))  # pour l'ordre sur l'axe x
+  #     )
+  #   
+  #   # Create a bar plot using ggplot
+  #   p <- ggplot(category_count, aes(x = Category_label, y = count, fill = Category)) +
+  #     geom_bar(stat = "identity", show.legend = FALSE) +
+  #     geom_text(aes(label = count), vjust = 3, size = 4.5, fontface = "bold", color = "black") +
+  #     theme_minimal(base_size = 14) +
+  #     theme(
+  #       axis.text.x = element_text(angle = 0, hjust = 0.5, size = 12),
+  #       plot.title = element_text(face = "bold", hjust = 0.5),
+  #       axis.title.x = element_text(margin = margin(t = 10)),
+  #       axis.title.y = element_text(margin = margin(r = 10))
+  #     ) +
+  #     scale_fill_brewer(palette = "Set3") +
+  #     labs(x = "Category", y = "Number of Initiatives", title = "Number of Initiatives by Category")  # Labels for axes and title
+  #   
+  #   ggplotly(p, tooltip = "text", source = "select_bar")  # Make the ggplot chart interactive with Plotly
+  # })
+  # 
+  # #####  
+  # # Reactive value to store the category selected by the user from the chart
+  # selected_category <- reactiveVal(NULL)  # Initially set the selected category to NULL
+  # 
+  # # Observe the click event on the Plotly chart to update the selected category
+  # observeEvent(event_data("plotly_click", source = "select_bar"), {
+  #   click_data <- event_data("plotly_click", source = "select_bar")  # Capture click event data
+  #   
+  #   if (!is.null(click_data)) {  # Check if the click data is valid
+  #     selected_category(click_data$text)  # Update the selected category based on the clicked category
+  #     cat("Selected category:", selected_category(), "\n")
+  #   }
+  # })
+  # 
+  # # Reactive expression to get unique category labels from the data
+  # category_labels <- reactive({
+  #   data <- data_reactive()  # Get the most recent data
+  #   unique(data$Category)  # Return the unique category labels from the 'Category' column
+  # })
+  # 
+  # # Handle the category selection logic when a category is clicked
+  # observeEvent(event_data("plotly_click", source = "select_bar"), {
+  #   click_data <- event_data("plotly_click", source = "select_bar")  # Capture click event data
+  #   
+  #   if (!is.null(click_data)) {  # If click data exists
+  #     category_index <- as.numeric(click_data$x)  # Convert the clicked category index to numeric
+  #     labels <- category_labels()  # Get the unique category labels from the data
+  #     
+  #     # Check if the clicked index is valid and update the selected category accordingly
+  #     if (category_index > 0 && category_index <= length(labels)) {
+  #       selected_category(labels[category_index])  # Set the selected category to the clicked one
+  #     } else {
+  #       selected_category(NULL)  # Set to NULL if the clicked index is out of bounds
+  #     }
+  #     
+  #     cat("Selected category:", selected_category(), "\n")  # Print the selected category for debugging
+  #   }
+  # })
+  # 
+  # # Output: Render the UI elements based on the selected category (display initiatives table or message)
+  # output$clicked_initiatives <- renderUI({
+  #   data <- data_reactive()  # Get the most recent data
+  #   
+  #   if (is.null(selected_category())) {
+  #     return(tags$p("Click on a bar in the chart to view the corresponding initiatives.", style = "color: #999;"))  # Message when no category is selected
+  #   }
+  #   
+  #   # Filter the data based on the selected category
+  #   filtered_data <- data %>% filter(Category == selected_category())
+  #   
+  #   cat("Selected category after update:", selected_category(), "\n")
+  #   cat("Number of rows after filtering:", nrow(filtered_data), "\n")
+  #   
+  #   DT::dataTableOutput("initiatives_table")  # Output the filtered data table
+  # })
+  # 
+  # # Render the data table with the filtered initiatives data based on the selected category
+  # output$initiatives_table <- DT::renderDataTable({
+  #   filtered_data <- data_reactive() %>% filter(Category == selected_category())  # Filter the data based on selected category
+  #   
+  #   DT::datatable(
+  #     filtered_data %>% select(OrgName, Category, CommunityGovernance, Nonprofit, OpenSource),  # Select the columns to display
+  #     options = list(pageLength = 5, autoWidth = TRUE),  # Set the table options (page length and auto width)
+  #     rownames = FALSE  # Disable row names in the table
+  #   )
+  # })
+
+  
+  # Data reactive
+  data_reactive <- reactive({
+    data
+  })
+  
+  # Reactive value for selection
+  selected_category <- reactiveVal(NULL)
+  
+  # Reactive table of categories with counts and wrapped labels (used for plotting and indexing)
+  plotted_categories <- reactive({
+    data <- data_reactive()
+    data %>%
+      count(Category, name = "count") %>%
+      arrange(desc(count)) %>%
+      mutate(
+        Category_label = str_wrap(as.character(Category), width = 15),
+        Category_label = factor(Category_label, levels = unique(Category_label))
+      )
+  })
+  
+  # Plot
   output$category_plot <- renderPlotly({
-    data <- data_reactive()  # Get the most recent data
+    cat_data <- plotted_categories()
     
-    # Count the number of initiatives per category for the Y-axis
-    category_count <- data %>%
-      group_by(Category) %>%
-      summarise(count = n(), .groups = "drop")  # Group by Category and count the number of occurrences
+    p <- ggplot(cat_data, aes(x = Category_label, y = count, fill = Category)) +
+      geom_bar(stat = "identity", show.legend = FALSE) +
+      geom_text(aes(label = count), vjust = 3, size = 4.5, fontface = "bold", color = "black") +
+      theme_minimal(base_size = 14) +
+      theme(
+        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 12),
+        plot.title = element_text(face = "bold", hjust = 0.5),
+        axis.title.x = element_text(margin = margin(t = 10)),
+        axis.title.y = element_text(margin = margin(r = 10))
+      ) +
+      scale_fill_brewer(palette = "Set3") +
+      labs(x = "Category", y = "Number of Initiatives", title = "Number of Initiatives by Category")
     
-    # Create a bar plot using ggplot
-    p <- ggplot(category_count, aes(x = Category, y = count, fill = Category)) +
-      geom_bar(stat = "identity") +  # Create a bar chart
-      geom_text(aes(label = count), vjust = -0.5, size = 5) +  # Display the count labels above the bars
-      theme_minimal() +  # Use a minimal theme for the plot
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Rotate the x-axis labels for better readability
-      scale_fill_brewer(palette = "Set3") +  # Use a color palette for the bars
-      labs(x = "Category", y = "Number of Initiatives", title = "Number of Initiatives by Category")  # Labels for axes and title
-    
-    ggplotly(p, source = "select_bar")  # Make the ggplot chart interactive with Plotly
+    ggplotly(p, tooltip = "none", source = "select_bar")
   })
   
-  #####  
-  # Reactive value to store the category selected by the user from the chart
-  selected_category <- reactiveVal(NULL)  # Initially set the selected category to NULL
-  
-  # Observe the click event on the Plotly chart to update the selected category
+  # Selection from click
   observeEvent(event_data("plotly_click", source = "select_bar"), {
-    click_data <- event_data("plotly_click", source = "select_bar")  # Capture click event data
+    click_data <- event_data("plotly_click", source = "select_bar")
     
-    if (!is.null(click_data)) {  # Check if the click data is valid
-      selected_category(click_data$x)  # Update the selected category based on the clicked category
-    }
-  })
-  
-  # Reactive expression to get unique category labels from the data
-  category_labels <- reactive({
-    data <- data_reactive()  # Get the most recent data
-    unique(data$Category)  # Return the unique category labels from the 'Category' column
-  })
-  
-  # Handle the category selection logic when a category is clicked
-  observeEvent(event_data("plotly_click", source = "select_bar"), {
-    click_data <- event_data("plotly_click", source = "select_bar")  # Capture click event data
-    
-    if (!is.null(click_data)) {  # If click data exists
-      category_index <- as.numeric(click_data$x)  # Convert the clicked category index to numeric
-      labels <- category_labels()  # Get the unique category labels from the data
+    if (!is.null(click_data)) {
+      index <- round(click_data$x) #  # plotly index starts at 0
+      categories <- plotted_categories()
       
-      # Check if the clicked index is valid and update the selected category accordingly
-      if (category_index > 0 && category_index <= length(labels)) {
-        selected_category(labels[category_index])  # Set the selected category to the clicked one
+      if (index >= 1 && index <= nrow(categories)) {
+        cat <- categories$Category[index]
+        selected_category(cat)
+        cat("Category clicked (via index):", cat, "\n")
       } else {
-        selected_category(NULL)  # Set to NULL if the clicked index is out of bounds
+        selected_category(NULL)
       }
-      
-      cat("Selected category:", selected_category(), "\n")  # Print the selected category for debugging
     }
   })
   
-  # Output: Render the UI elements based on the selected category (display initiatives table or message)
+  # UI output
   output$clicked_initiatives <- renderUI({
-    data <- data_reactive()  # Get the most recent data
+    data <- data_reactive()
     
     if (is.null(selected_category())) {
-      return(tags$p("Click on a bar in the chart to view the corresponding initiatives.", style = "color: #999;"))  # Message when no category is selected
+      return(tags$p("Click on a bar in the chart to view the corresponding initiatives.", style = "color: #999;"))
     }
     
-    # Filter the data based on the selected category
     filtered_data <- data %>% filter(Category == selected_category())
     
     cat("Selected category after update:", selected_category(), "\n")
     cat("Number of rows after filtering:", nrow(filtered_data), "\n")
     
-    DT::dataTableOutput("initiatives_table")  # Output the filtered data table
+    DT::dataTableOutput("initiatives_table")
   })
   
-  # Render the data table with the filtered initiatives data based on the selected category
+  # Table output
   output$initiatives_table <- DT::renderDataTable({
-    filtered_data <- data_reactive() %>% filter(Category == selected_category())  # Filter the data based on selected category
+    filtered_data <- data_reactive() %>% filter(Category == selected_category())
     
     DT::datatable(
-      filtered_data %>% select(OrgName, Category, CommunityGovernance, Nonprofit, OpenSource),  # Select the columns to display
-      options = list(pageLength = 5, autoWidth = TRUE),  # Set the table options (page length and auto width)
-      rownames = FALSE  # Disable row names in the table
+      filtered_data %>% select(OrgName, Category, CommunityGovernance, Nonprofit, OpenSource),
+      options = list(pageLength = 5, autoWidth = TRUE),
+      rownames = FALSE
     )
   })
   
+    
   #####
   # Render the world map with Leaflet, showing initiatives by country
   output$world_map <- renderLeaflet({
