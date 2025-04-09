@@ -46,7 +46,6 @@ gs4_auth(path = file.path(getwd(), "cle.json"))
 download_data <- function() {
   sheet_url <- "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1136935931#gid=1136935931" # "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=0#gid=0"
   read_sheet(sheet_url) %>%
-    #filter(!(adm0_a3 == "NA") & !is.na(Country)) %>%
     as.data.frame()
 }
 
@@ -136,12 +135,12 @@ data$cluster <- cutree(arbre_phi2, 4)  # Cut the dendrogram into 5 clusters
 
 #######################
 # Update Google Sheets with the Cluster Data
-#######################
-# Define the URL for the Google Sheet to update
-sheet_url <- "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo"
-
-# Write the data (including cluster information) back to the Google Sheet
-write_sheet(data, ss = sheet_url, sheet = "Clusters")
+# #######################
+# # Define the URL for the Google Sheet to update
+# sheet_url <- "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494"
+# 
+# # Write the data (including cluster information) back to the Google Sheet
+# write_sheet(data, ss = sheet_url, sheet = "Clusters")
 
 #######################
 # Define Custom CSS for Popups in Leaflet Maps
@@ -345,7 +344,7 @@ ui <- dashboardPage(
                   style = "cursor: pointer; text-align: center; font-size: 18px; 
                            border-radius: 10px; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);",
                   tags$a(
-                    href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=998126494#gid=998126494",
+                    href = "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494",
                     target = "_blank",
                     "📊 Access Clusters on Google Sheets",
                     style = "color: #ffffff; text-decoration: none; display: block; padding: 15px; background-color: #007bff; border-radius: 10px;"
@@ -374,15 +373,6 @@ ui <- dashboardPage(
     )
   )
 
-# # Ajout de l'icône dans la section head
-# ui <- tagList(
-#   tags$head(
-#     tags$title("OS Initiatives Dashboard")
-#   ),
-#   tags$a("🌐 OS Initiatives", href = "https://www.gemass.fr/contract/openit/", 
-#          style = "font-size: 20px; text-decoration: none; margin-left: 10px;"),
-#   ui
-# )
 
 # # Ajout de l'icône dans la section head
 ui <- tagList(
@@ -421,109 +411,6 @@ server <- function(input, output, session) {
     data <- data_reactive()  # Get the most recent data
     n_distinct(data$OrgName2)  # Count the number of distinct initiatives based on the 'OrgName2' column
   })
-  
-  
-  # # Creating an interactive Plotly bar chart to show the number of initiatives by category
-  # output$category_plot <- renderPlotly({
-  #   data <- data_reactive()  # Get the most recent data
-  #   
-  #   # Count the number of initiatives per category for the Y-axis
-  #   category_count <- data %>%
-  #     group_by(Category) %>%
-  #     summarise(count = n(), .groups = "drop")  # Group by Category and count the number of occurrences
-  #   # Tri des catégories par ordre décroissant
-  #   category_count <- category_count %>%
-  #     arrange(desc(count)) %>%
-  #     mutate(
-  #       Category = factor(Category, levels = unique(Category)),  # pour le tri des couleurs
-  #       Category_label = str_wrap(as.character(Category), width = 15),
-  #       Category_label = factor(Category_label, levels = unique(Category_label))  # pour l'ordre sur l'axe x
-  #     )
-  #   
-  #   # Create a bar plot using ggplot
-  #   p <- ggplot(category_count, aes(x = Category_label, y = count, fill = Category)) +
-  #     geom_bar(stat = "identity", show.legend = FALSE) +
-  #     geom_text(aes(label = count), vjust = 3, size = 4.5, fontface = "bold", color = "black") +
-  #     theme_minimal(base_size = 14) +
-  #     theme(
-  #       axis.text.x = element_text(angle = 0, hjust = 0.5, size = 12),
-  #       plot.title = element_text(face = "bold", hjust = 0.5),
-  #       axis.title.x = element_text(margin = margin(t = 10)),
-  #       axis.title.y = element_text(margin = margin(r = 10))
-  #     ) +
-  #     scale_fill_brewer(palette = "Set3") +
-  #     labs(x = "Category", y = "Number of Initiatives", title = "Number of Initiatives by Category")  # Labels for axes and title
-  #   
-  #   ggplotly(p, tooltip = "text", source = "select_bar")  # Make the ggplot chart interactive with Plotly
-  # })
-  # 
-  # #####  
-  # # Reactive value to store the category selected by the user from the chart
-  # selected_category <- reactiveVal(NULL)  # Initially set the selected category to NULL
-  # 
-  # # Observe the click event on the Plotly chart to update the selected category
-  # observeEvent(event_data("plotly_click", source = "select_bar"), {
-  #   click_data <- event_data("plotly_click", source = "select_bar")  # Capture click event data
-  #   
-  #   if (!is.null(click_data)) {  # Check if the click data is valid
-  #     selected_category(click_data$text)  # Update the selected category based on the clicked category
-  #     cat("Selected category:", selected_category(), "\n")
-  #   }
-  # })
-  # 
-  # # Reactive expression to get unique category labels from the data
-  # category_labels <- reactive({
-  #   data <- data_reactive()  # Get the most recent data
-  #   unique(data$Category)  # Return the unique category labels from the 'Category' column
-  # })
-  # 
-  # # Handle the category selection logic when a category is clicked
-  # observeEvent(event_data("plotly_click", source = "select_bar"), {
-  #   click_data <- event_data("plotly_click", source = "select_bar")  # Capture click event data
-  #   
-  #   if (!is.null(click_data)) {  # If click data exists
-  #     category_index <- as.numeric(click_data$x)  # Convert the clicked category index to numeric
-  #     labels <- category_labels()  # Get the unique category labels from the data
-  #     
-  #     # Check if the clicked index is valid and update the selected category accordingly
-  #     if (category_index > 0 && category_index <= length(labels)) {
-  #       selected_category(labels[category_index])  # Set the selected category to the clicked one
-  #     } else {
-  #       selected_category(NULL)  # Set to NULL if the clicked index is out of bounds
-  #     }
-  #     
-  #     cat("Selected category:", selected_category(), "\n")  # Print the selected category for debugging
-  #   }
-  # })
-  # 
-  # # Output: Render the UI elements based on the selected category (display initiatives table or message)
-  # output$clicked_initiatives <- renderUI({
-  #   data <- data_reactive()  # Get the most recent data
-  #   
-  #   if (is.null(selected_category())) {
-  #     return(tags$p("Click on a bar in the chart to view the corresponding initiatives.", style = "color: #999;"))  # Message when no category is selected
-  #   }
-  #   
-  #   # Filter the data based on the selected category
-  #   filtered_data <- data %>% filter(Category == selected_category())
-  #   
-  #   cat("Selected category after update:", selected_category(), "\n")
-  #   cat("Number of rows after filtering:", nrow(filtered_data), "\n")
-  #   
-  #   DT::dataTableOutput("initiatives_table")  # Output the filtered data table
-  # })
-  # 
-  # # Render the data table with the filtered initiatives data based on the selected category
-  # output$initiatives_table <- DT::renderDataTable({
-  #   filtered_data <- data_reactive() %>% filter(Category == selected_category())  # Filter the data based on selected category
-  #   
-  #   DT::datatable(
-  #     filtered_data %>% select(OrgName, Category, CommunityGovernance, Nonprofit, OpenSource),  # Select the columns to display
-  #     options = list(pageLength = 5, autoWidth = TRUE),  # Set the table options (page length and auto width)
-  #     rownames = FALSE  # Disable row names in the table
-  #   )
-  # })
-
   
   # Data reactive
   data_reactive <- reactive({
@@ -729,6 +616,16 @@ server <- function(input, output, session) {
   # Render the dendrogram (cluster analysis) plot
   output$dendrogram <- renderPlotly({
     data <- data_reactive()  # Get the most recent data
+    
+    #######################
+    # Update Google Sheets with the Cluster Data
+    #######################
+    # Define the URL for the Google Sheet to update
+    sheet_url <- "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494"
+    
+    # Write the data (including cluster information) back to the Google Sheet
+    write_sheet(data, ss = sheet_url, sheet = "Clusters")
+    
     
     # Create a dendrogram using factoextra::fviz_dend
     p1 <- factoextra::fviz_dend(
