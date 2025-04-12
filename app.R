@@ -185,22 +185,21 @@ ui <- dashboardPage(
             
       # Add a clickable logo that redirects to an external link
       tags$li(class = "dropdown", 
-              tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", 
-                     target = "_blank", 
-                     tags$img(src = "logo_ANR.jpg", 
-                              height = "40px", 
-                              style = "margin: 0px 0 0px 0px; display: block;")
-              )
-      ),
-      # Add a clickable logo that redirects to an external link
-      tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
                      target = "_blank", 
                      tags$img(src = "logo.png", 
                               height = "40px", 
                               style = "margin: 0px 0 0px 0px; display: block;")
               )
-      )      
+      ),
+      
+      # Logo fixed at the bottom
+      tags$div(
+        tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
+               tags$img(src = "logo_ANR.jpg", height = "40px", style = "margin: 10px;")
+        ),
+        style = "position: absolute; bottom: 20px; left: 10px;"
+      )
     )
   ),
   
