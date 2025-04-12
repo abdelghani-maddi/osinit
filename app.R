@@ -185,9 +185,22 @@ ui <- dashboardPage(
             
       # Add a clickable logo that redirects to an external link
       tags$li(class = "dropdown", 
+              tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", 
+                     target = "_blank", 
+                     tags$img(src = "logo_ANR.jpg", 
+                              height = "40px", 
+                              style = "margin: 0px 0 0px 0px; display: block;")
+              )
+      ),
+      # Add a clickable logo that redirects to an external link
+      tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
                      target = "_blank", 
-                     imageOutput('logo_image')))  # Display logo (to be defined in the server)
+                     tags$img(src = "logo.png", 
+                              height = "40px", 
+                              style = "margin: 0px 0 0px 0px; display: block;")
+              )
+      )      
     )
   ),
   
@@ -205,11 +218,11 @@ ui <- dashboardPage(
   #   }
   # "))
   #   ),
-      #28a745
+    #41ab6b
     tags$head(
       tags$style(HTML("
     .sidebar-menu li:nth-child(1) a:hover {
-      background-color: #8aa728 !important;  /* Green for Global Overview */
+      background-color: #ba3470 !important;  /* Pink for Global Overview */
       color: white !important;
     }
     .sidebar-menu li:nth-child(2) a:hover {
@@ -221,11 +234,15 @@ ui <- dashboardPage(
       color: black !important;
     }
     .sidebar-menu li:nth-child(4) a:hover {
-      background-color: #fd7e14 !important;  /* Orange for FAQs */
+      background-color: #8aa728 !important;  /* Green for FAQs */
       color: white !important;
     }
     .sidebar-menu li:nth-child(5) a:hover {
-      background-color: #288aa7 !important;  /* Blue for FAQs */
+      background-color: #a72859 !important;  /* Blue for Logo */
+      color: white !important;
+    }
+    .sidebar-menu li:nth-child(6) a:hover {
+      background-color: #288aa7 !important;  /* Blue for Logo */
       color: white !important;
     }
   "))
@@ -488,7 +505,7 @@ server <- function(input, output, session) {
          alt = "Logo OS Initiatives",  # Alt text for the image
          height = "70px",  # Set the height of the logo
          width = "auto")  # Set width to auto to maintain aspect ratio
-  }, deleteFile = FALSE)  # Ensure the image file is not deleted after rendering
+      }, deleteFile = FALSE)  # Ensure the image file is not deleted after rendering
   
   # Reactive poll to update the data every 10 minutes (600000 ms)
   data_reactive <- reactivePoll(600000, session,
