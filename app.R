@@ -161,7 +161,7 @@ ui <- dashboardPage(
   
   # Dashboard header with title and customized width
   dashboardHeader(
-    title = "Open Science Initiatives",  # Dashboard title
+    title = tags$strong("Open Science Initiatives"),  # Dashboard title
     titleWidth = 450           # Custom width for the title
   ),
   
@@ -393,11 +393,11 @@ ui <- dashboardPage(
               fluidRow(
                 div(
                   style = "padding: 20px; text-align: center; font-size: 18px;",
-                  tags$p("About this project"),
+                  tags$p(tags$strong("About this project")),
                   tags$iframe(
                     src = "https://docs.google.com/document/d/163di4K3TfQqM-zqEc7IrxB7SCnhiZPn0pK-fbQrIftQ/preview",
                     width = "100%",
-                    height = "600px",  # Ajuste la hauteur de l'iframe selon le besoin
+                    height = "800px",  # Ajuste la hauteur de l'iframe selon le besoin
                     style = "border: none;"
                   )
                 )
@@ -410,11 +410,11 @@ ui <- dashboardPage(
               fluidRow(
                 div(
                   style = "padding: 20px; text-align: center; font-size: 18px;",
-                  tags$p("Frequently Asked Questions - FAQs"),
+                  tags$p(tags$strong("Frequently Asked Questions - FAQs")),
                   tags$iframe(
                     src = "https://docs.google.com/document/d/1F0CrXoXABLvmHDQO3ChrjtR_u9g7Zz5K4tzziCTsqEQ/preview",
                     width = "100%",
-                    height = "600px",  # Ajuste la hauteur de l'iframe selon le besoin
+                    height = "800px",  # Ajuste la hauteur de l'iframe selon le besoin
                     style = "border: none;"
                   )
                 )
@@ -553,7 +553,7 @@ server <- function(input, output, session) {
   # Render the world map with Leaflet, showing initiatives by country
   output$world_map <- renderLeaflet({
     data <- data_reactive()  # Get the most recent data
-    
+
     # Create a Leaflet map to visualize initiatives by country
     leaflet(initiatives_par_pays) %>%
       addTiles() %>%  # Add default OpenStreetMap tiles
@@ -579,7 +579,7 @@ server <- function(input, output, session) {
               lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
               zoom = 2)  # Zoom level
   })
-  
+
   # Render the map with pie charts representing community governance in each country
   output$comm_gov <- renderLeaflet({
     data <- data_reactive()  # Get the most recent data
