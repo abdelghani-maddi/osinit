@@ -478,7 +478,7 @@ server <- function(input, output, session) {
       count(Category, name = "count") %>%
       arrange(desc(count)) %>%
       mutate(
-        Category_label = str_wrap(as.character(Category), width = 10),
+        Category_label = str_wrap(as.character(Category), width = 9),
         Category_label = factor(Category_label, levels = unique(Category_label))
       )
   })
@@ -492,7 +492,7 @@ server <- function(input, output, session) {
       geom_text(aes(label = count), vjust = 3, size = 4.5, fontface = "bold", color = "black") +
       theme_minimal(base_size = 14) +
       theme(
-        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 9),
+        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
         plot.title = element_text(face = "bold", hjust = 0.5),
         axis.title.x = element_text(margin = margin(t = 9)),
         axis.title.y = element_text(margin = margin(r = 10))
