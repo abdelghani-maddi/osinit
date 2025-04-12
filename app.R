@@ -193,6 +193,45 @@ ui <- dashboardPage(
   
   # Body of the dashboard (different pages and visualizations)
   dashboardBody(
+    
+  #   tags$head(
+  #     tags$style(HTML("
+  #   .sidebar-menu li a {
+  #     transition: background-color 0.3s ease, color 0.3s ease;
+  #   }
+  #   .sidebar-menu li a:hover {
+  #     background-color: #007bff !important;  /* Couleur de fond survol */
+  #     color: white !important;               /* Couleur du texte survol */
+  #   }
+  # "))
+  #   ),
+      #28a745
+    tags$head(
+      tags$style(HTML("
+    .sidebar-menu li:nth-child(1) a:hover {
+      background-color: #8aa728 !important;  /* Green for Global Overview */
+      color: white !important;
+    }
+    .sidebar-menu li:nth-child(2) a:hover {
+      background-color: #17a2b8 !important;  /* Cyan for MCA & Clustering */
+      color: white !important;
+    }
+    .sidebar-menu li:nth-child(3) a:hover {
+      background-color: #ffc107 !important;  /* Yellow for About */
+      color: black !important;
+    }
+    .sidebar-menu li:nth-child(4) a:hover {
+      background-color: #fd7e14 !important;  /* Orange for FAQs */
+      color: white !important;
+    }
+    .sidebar-menu li:nth-child(5) a:hover {
+      background-color: #288aa7 !important;  /* Blue for FAQs */
+      color: white !important;
+    }
+  "))
+    ),
+    
+    
     tabItems(
       
       # Global overview (overview)
