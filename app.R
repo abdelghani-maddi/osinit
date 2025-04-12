@@ -161,7 +161,7 @@ ui <- dashboardPage(
   
   # Dashboard header with title and customized width
   dashboardHeader(
-    title = "OS initiatives",  # Dashboard title
+    title = "Open Science Initiatives",  # Dashboard title
     titleWidth = 450           # Custom width for the title
   ),
   
@@ -178,7 +178,11 @@ ui <- dashboardPage(
       # Menu item for "About" Page
       menuItem("About", tabName = "about", icon = icon("info-circle")),
       
+
+      # Menu item for "FAQ" Page
+      menuItem("FAQs", tabName = "FAQs", icon = icon("lightbulb")),
       
+            
       # Add a clickable logo that redirects to an external link
       tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
@@ -334,6 +338,7 @@ ui <- dashboardPage(
                   )
                 )
               ),
+              
               fluidRow(
                 # Box with a link to explore the clusters further
                 box(
@@ -341,34 +346,80 @@ ui <- dashboardPage(
                   status = "info",
                   solidHeader = TRUE,
                   width = 12,
-                  style = "cursor: pointer; text-align: center; font-size: 18px; 
-                           border-radius: 10px; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);",
+                  style = "
+      cursor: pointer;
+      text-align: center;
+      font-size: 18px;
+      border-radius: 15px;
+      border: 1px solid #007bff;
+      padding: 20px;
+      transition: all 0.3s ease-in-out;
+      color: white;
+    ",
                   tags$a(
                     href = "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494",
                     target = "_blank",
                     "📊 Access Clusters on Google Sheets",
-                    style = "color: #ffffff; text-decoration: none; display: block; padding: 15px; background-color: #007bff; border-radius: 10px;"
+                    style = "
+        color: #ffffff;
+        text-decoration: none;
+        display: inline-block;
+        padding: 15px 30px;
+        background-color: #007bff;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 16px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.3s ease;
+      "
                   ),
                   tags$p(
-                    "Click the link above to explore the clustering results in more detail, including which initiatives belong to each cluster."
+                    "Click the link above to explore the clustering results in more detail, including which initiatives belong to each cluster.",
+                    style = "
+        margin-top: 15px;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #0a0303;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+      "
                   )
                 )
               )
               
       ),
       # "About" tab
-      # Ajout de l'onglet About
+      
       tabItem(tabName = "about",
               fluidRow(
-                box(
-                  title = "About this Project", status = "primary", solidHeader = TRUE,
-                  width = 12,
-                  div(style = "white-space: pre-wrap;",
-                      paste(readLines("About.txt"), collapse = "\n"))
+                div(
+                  style = "padding: 20px; text-align: center; font-size: 18px;",
+                  tags$p("About this project"),
+                  tags$iframe(
+                    src = "https://docs.google.com/document/d/163di4K3TfQqM-zqEc7IrxB7SCnhiZPn0pK-fbQrIftQ/preview",
+                    width = "100%",
+                    height = "600px",  # Ajuste la hauteur de l'iframe selon le besoin
+                    style = "border: none;"
+                  )
                 )
-                
               )
-      )
+      ),
+      
+      # "FAQ" tab
+      
+      tabItem(tabName = "FAQs",
+              fluidRow(
+                div(
+                  style = "padding: 20px; text-align: center; font-size: 18px;",
+                  tags$p("Frequently Asked Questions - FAQs"),
+                  tags$iframe(
+                    src = "https://docs.google.com/document/d/1F0CrXoXABLvmHDQO3ChrjtR_u9g7Zz5K4tzziCTsqEQ/preview",
+                    width = "100%",
+                    height = "600px",  # Ajuste la hauteur de l'iframe selon le besoin
+                    style = "border: none;"
+                  )
+                )
+              )
+      )      
     )
     )
   )
@@ -427,7 +478,7 @@ server <- function(input, output, session) {
       count(Category, name = "count") %>%
       arrange(desc(count)) %>%
       mutate(
-        Category_label = str_wrap(as.character(Category), width = 15),
+        Category_label = str_wrap(as.character(Category), width = 10),
         Category_label = factor(Category_label, levels = unique(Category_label))
       )
   })
@@ -441,9 +492,9 @@ server <- function(input, output, session) {
       geom_text(aes(label = count), vjust = 3, size = 4.5, fontface = "bold", color = "black") +
       theme_minimal(base_size = 14) +
       theme(
-        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 12),
+        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 9),
         plot.title = element_text(face = "bold", hjust = 0.5),
-        axis.title.x = element_text(margin = margin(t = 10)),
+        axis.title.x = element_text(margin = margin(t = 9)),
         axis.title.y = element_text(margin = margin(r = 10))
       ) +
       scale_fill_brewer(palette = "Set3") +
@@ -491,7 +542,7 @@ server <- function(input, output, session) {
     filtered_data <- data_reactive() %>% filter(Category == selected_category())
     
     DT::datatable(
-      filtered_data %>% select(OrgName, Category, CommunityGovernance, Nonprofit, OpenSource),
+      filtered_data %>% select(OrgName, Category, Country, CommunityGovernance, Nonprofit, OpenSource),
       options = list(pageLength = 5, autoWidth = TRUE),
       rownames = FALSE
     )
@@ -522,7 +573,7 @@ server <- function(input, output, session) {
         "bottomright",  # Position of the legend
         pal = colorNumeric("plasma", initiatives_par_pays$nb),  # Color palette for legend
         values = initiatives_par_pays$nb,  # Legend values
-        title = "Initiatives count"  # Title of the legend
+        title = "Initiatives Count"  # Title of the legend
       ) %>%
       setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),  # Set initial map view
               lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
@@ -543,12 +594,12 @@ server <- function(input, output, session) {
         width = 30, height = 30,  # Size of the pie charts
         opacity = 0.8  # Opacity of the pie charts
       ) %>%
-      addLegend(
-        "bottomright",  # Position of the legend
-        colors = c("blue", "red"),  # Colors for Yes/No
-        labels = c("Yes", "No"),  # Labels for the legend
-        title = "Community Governance"  # Title of the legend
-      ) %>%
+      # addLegend(
+      #   "bottomright",  # Position of the legend
+      #   colors = c("blue", "red"),  # Colors for Yes/No
+      #   labels = c("Yes", "No"),  # Labels for the legend
+      #   title = "Community Governance"  # Title of the legend
+      # ) %>%
       setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
               lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
               zoom = 2)  # Set the initial map view and zoom level
@@ -617,16 +668,6 @@ server <- function(input, output, session) {
   output$dendrogram <- renderPlotly({
     data <- data_reactive()  # Get the most recent data
     
-    #######################
-    # Update Google Sheets with the Cluster Data
-    #######################
-    # Define the URL for the Google Sheet to update
-    sheet_url <- "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494"
-    
-    # Write the data (including cluster information) back to the Google Sheet
-    write_sheet(data, ss = sheet_url, sheet = "Clusters")
-    
-    
     # Create a dendrogram using factoextra::fviz_dend
     p1 <- factoextra::fviz_dend(
       arbre_phi2,  # Input tree structure for clustering
@@ -639,7 +680,26 @@ server <- function(input, output, session) {
       theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate the x-axis labels for better readability
     
     ggplotly(p1)  # Convert the ggplot to a Plotly interactive plot
-  })  
+  }) 
+  
+  
+  
+  
+  observeEvent(data_reactive(), {
+    # Récupération des données actualisées
+    data <- data_reactive()
+    
+    # Ajout du clustering
+    clustered_data <- data %>%
+      mutate(cluster = cutree(arbre_phi2, k = 4))
+    
+    # Écriture dans Google Sheet
+    sheet_id <- "1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8"
+    write_sheet(clustered_data, ss = sheet_id, sheet = "Clusters")
+    
+    cat("✅ Clusters mis à jour dans Google Sheet.\n")
+  })
+  
 }
 
 # To deploy the app locally
