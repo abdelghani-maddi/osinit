@@ -699,7 +699,7 @@ server <- function(input, output, session) {
     
     cat("✅ Clusters mis à jour dans Google Sheet.\n")
   })
-  
+   
 }
 
 # To deploy the app locally
