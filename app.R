@@ -705,6 +705,6 @@ server <- function(input, output, session) {
 # To deploy the app locally
 shinyApp(ui = ui, server = server)
 
-# To deploy the app online
+# To deploy the app online 
 # rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
 
