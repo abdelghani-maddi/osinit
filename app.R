@@ -206,19 +206,10 @@ ui <- dashboardPage(
   # Body of the dashboard (different pages and visualizations)
   dashboardBody(
     
-  #   tags$head(
-  #     tags$style(HTML("
-  #   .sidebar-menu li a {
-  #     transition: background-color 0.3s ease, color 0.3s ease;
-  #   }
-  #   .sidebar-menu li a:hover {
-  #     background-color: #007bff !important;  /* Couleur de fond survol */
-  #     color: white !important;               /* Couleur du texte survol */
-  #   }
-  # "))
-  #   ),
-    #41ab6b
+ 
     tags$head(
+      
+      # Ajouter des couleurs aux Tables de la barre latérale
       tags$style(HTML("
     .sidebar-menu li:nth-child(1) a:hover {
       background-color: #ba3470 !important;  /* Pink for Global Overview */
@@ -244,7 +235,41 @@ ui <- dashboardPage(
       background-color: #288aa7 !important;  /* Blue for Logo */
       color: white !important;
     }
-  "))
+  ")),
+      
+      # Ajouter une limière qui suit la souris
+  #     tags$head(
+  #       tags$style(HTML("
+  #   #cursor-light {
+  #     position: absolute;
+  #     width: 120px;
+  #     height: 120px;
+  #     pointer-events: none;
+  #     border-radius: 50%;
+  #     background: radial-gradient(circle, rgba(160,32,240,0.3) 0%, rgba(160,32,240,0) 70%);
+  #     z-index: 999;
+  #     transform: translate(-50%, -50%);
+  #     opacity: 0;
+  #     transition: opacity 0.3s ease;
+  #   }
+  # ")),
+  #       tags$script(HTML("
+  #   $(document).ready(function() {
+  #     $('body').append('<div id=\"cursor-light\"></div>');
+  #     $(document).mousemove(function(e) {
+  #       $('#cursor-light').css({
+  #         left: e.pageX + 'px',
+  #         top: e.pageY + 'px',
+  #         opacity: 1
+  #       });
+  #     });
+  #     $(document).mouseleave(function() {
+  #       $('#cursor-light').css('opacity', 0);
+  #     });
+  #   });
+  # "))
+  #     )
+      
     ),
     
     
