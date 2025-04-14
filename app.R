@@ -384,7 +384,7 @@ ui <- dashboardPage(
                     actionButton("save_worldmap", "📥 Download World Map", icon = icon("download"),
                                  style = "margin-top:10px; background-color:#007bff; color:white;")
                   )
-                ),
+                ), 
                 column(
                   width = 6,
                   box(
