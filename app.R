@@ -23,6 +23,8 @@ library(ggforce)  # For advanced plotting with ggplot2
 library(leaflet)  # For interactive maps
 library(htmltools)  # For HTML tools in Shiny
 library(explor)
+library(htmlwidgets)
+
 
 #######################
 # Set up Shiny app credentials
@@ -206,7 +208,25 @@ ui <- dashboardPage(
   # Body of the dashboard (different pages and visualizations)
   dashboardBody(
     
- 
+    # tags$head(
+    #   tags$script(src = "https://unpkg.com/leaflet-easyprint/dist/bundle.min.js")
+    # ),
+    tags$script(src = "https://unpkg.com/leaflet-easyprint/dist/bundle.min.js"),
+    tags$script(HTML("
+  Shiny.addCustomMessageHandler('downloadMap', function(message) {
+    var map = window.Leaflet.shinyMap[message.mapId];
+    if(map) {
+      L.easyPrint({
+        tileLayer: '',
+        filename: message.filename,
+        exportOnly: true,
+        hideControlContainer: true
+      }).addTo(map).printMap('CurrentSize', message.filename);
+    }
+  });
+")),
+    
+
     tags$head(
       
       # Ajouter des couleurs aux Tables de la barre latérale
@@ -360,7 +380,9 @@ ui <- dashboardPage(
                     tags$style(HTML(popup_css)),  # CSS style for map popup
                     tags$p(
                       "This map visualizes the geographical distribution of open science initiatives around the world. Click on the bubbles to view the number of initiatives per country and a list of the specific projects."
-                    )
+                    ),
+                    actionButton("save_worldmap", "📥 Download World Map", icon = icon("download"),
+                                 style = "margin-top:10px; background-color:#007bff; color:white;")
                   )
                 ),
                 column(
@@ -373,7 +395,10 @@ ui <- dashboardPage(
                     leafletOutput("comm_gov"),  # Another map to show governance data
                     tags$p(
                       "This map displays a comparison of community governance practices in open science initiatives. The pie charts represent the proportion of initiatives with and without community-driven governance structures."
-                    )
+                    ),
+                    actionButton("save_commgov", "📥 Download Governance Map", icon = icon("download"),
+                                 style = "margin-top:10px; background-color:#007bff; color:white;")
+                    
                   )
                 )
               )
@@ -631,59 +656,119 @@ server <- function(input, output, session) {
     
   #####
   # Render the world map with Leaflet, showing initiatives by country
+  # output$world_map <- renderLeaflet({
+  #   data <- data_reactive()  # Get the most recent data
+  # 
+  #   # Create a Leaflet map to visualize initiatives by country
+  #   leaflet(initiatives_par_pays) %>%
+  #     addTiles() %>%  # Add default OpenStreetMap tiles
+  #     addCircleMarkers(
+  #       lng = ~Longitude, lat = ~Latitude,  # Use longitude and latitude for marker positions
+  #       radius = ~sqrt(nb) * 2,  # Size of the markers proportional to the square root of the count
+  #       color = ~colorNumeric("plasma", nb)(nb),  # Color based on the number of initiatives
+  #       fillOpacity = 0.8,  # Set the fill opacity of the circles
+  #       popup = ~paste(
+  #         "<b>Country :</b>", Country, "<br>",  # Popup displaying country and count information
+  #         "<b>Count :</b>", nb, "<br>",
+  #         "<b>Initiatives list :</b><br>", liste_initiatives
+  #       ),
+  #       popupOptions = popupOptions(className = "custom-popup")  # Custom popup options
+  #     ) %>%
+  #     addLegend(
+  #       "bottomright",  # Position of the legend
+  #       pal = colorNumeric("plasma", initiatives_par_pays$nb),  # Color palette for legend
+  #       values = initiatives_par_pays$nb,  # Legend values
+  #       title = "Initiatives Count"  # Title of the legend
+  #     ) %>%
+  #     setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),  # Set initial map view
+  #             lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
+  #             zoom = 2)  # Zoom level
+  #   
+  #   })
+  observeEvent(input$save_worldmap, {
+    session$sendCustomMessage("downloadMap", list(
+      mapId = "world_map",
+      filename = "OpenScience_Map"
+    ))
+  })  
   output$world_map <- renderLeaflet({
     data <- data_reactive()  # Get the most recent data
-
-    # Create a Leaflet map to visualize initiatives by country
-    leaflet(initiatives_par_pays) %>%
-      addTiles() %>%  # Add default OpenStreetMap tiles
+    
+    map <- leaflet(initiatives_par_pays) %>%
+      addTiles() %>%
       addCircleMarkers(
-        lng = ~Longitude, lat = ~Latitude,  # Use longitude and latitude for marker positions
-        radius = ~sqrt(nb) * 2,  # Size of the markers proportional to the square root of the count
-        color = ~colorNumeric("plasma", nb)(nb),  # Color based on the number of initiatives
-        fillOpacity = 0.8,  # Set the fill opacity of the circles
+        lng = ~Longitude, lat = ~Latitude,
+        radius = ~sqrt(nb) * 2,
+        color = ~colorNumeric("plasma", nb)(nb),
+        fillOpacity = 0.8,
         popup = ~paste(
-          "<b>Country :</b>", Country, "<br>",  # Popup displaying country and count information
+          "<b>Country :</b>", Country, "<br>",
           "<b>Count :</b>", nb, "<br>",
           "<b>Initiatives list :</b><br>", liste_initiatives
         ),
-        popupOptions = popupOptions(className = "custom-popup")  # Custom popup options
+        popupOptions = popupOptions(className = "custom-popup")
       ) %>%
       addLegend(
-        "bottomright",  # Position of the legend
-        pal = colorNumeric("plasma", initiatives_par_pays$nb),  # Color palette for legend
-        values = initiatives_par_pays$nb,  # Legend values
-        title = "Initiatives Count"  # Title of the legend
+        "bottomright",
+        pal = colorNumeric("plasma", initiatives_par_pays$nb),
+        values = initiatives_par_pays$nb,
+        title = "Initiatives Count"
       ) %>%
-      setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),  # Set initial map view
-              lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
-              zoom = 2)  # Zoom level
+      setView(
+        lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
+        lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
+        zoom = 2
+      )
+    
   })
+  
 
   # Render the map with pie charts representing community governance in each country
+  # output$comm_gov <- renderLeaflet({
+  #   data <- data_reactive()  # Get the most recent data
+  #   
+  #   leaflet() %>%
+  #     addTiles() %>%  # Add default OpenStreetMap tiles
+  #     addMinicharts(
+  #       lng = data_pie$Longitude, lat = data_pie$Latitude,  # Position of pie charts
+  #       type = "pie",  # Pie chart type
+  #       chartdata = data_pie[, c("Yes", "No")],  # Data for the Yes/No values in the pie chart
+  #       colorPalette = c("blue", "red"),  # Blue for Yes and Red for No
+  #       width = 30, height = 30,  # Size of the pie charts
+  #       opacity = 0.8  # Opacity of the pie charts
+  #     ) %>%
+  #     setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
+  #             lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
+  #             zoom = 2)  # Set the initial map view and zoom level
+  # })    
+  observeEvent(input$save_commgov, {
+    session$sendCustomMessage("downloadMap", list(
+      mapId = "comm_gov",
+      filename = "Community_Governance_Map"
+    ))
+  })
+  
   output$comm_gov <- renderLeaflet({
-    data <- data_reactive()  # Get the most recent data
+    data <- data_reactive()
     
-    leaflet() %>%
-      addTiles() %>%  # Add default OpenStreetMap tiles
+    map <- leaflet() %>%
+      addTiles() %>%
       addMinicharts(
-        lng = data_pie$Longitude, lat = data_pie$Latitude,  # Position of pie charts
-        type = "pie",  # Pie chart type
-        chartdata = data_pie[, c("Yes", "No")],  # Data for the Yes/No values in the pie chart
-        colorPalette = c("blue", "red"),  # Blue for Yes and Red for No
-        width = 30, height = 30,  # Size of the pie charts
-        opacity = 0.8  # Opacity of the pie charts
+        lng = data_pie$Longitude, lat = data_pie$Latitude,
+        type = "pie",
+        chartdata = data_pie[, c("Yes", "No")],
+        colorPalette = c("blue", "red"),
+        width = 30, height = 30,
+        opacity = 0.8
       ) %>%
-      # addLegend(
-      #   "bottomright",  # Position of the legend
-      #   colors = c("blue", "red"),  # Colors for Yes/No
-      #   labels = c("Yes", "No"),  # Labels for the legend
-      #   title = "Community Governance"  # Title of the legend
-      # ) %>%
-      setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
-              lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
-              zoom = 2)  # Set the initial map view and zoom level
-  })    
+      setView(
+        lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
+        lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
+        zoom = 2
+      )
+    
+  })
+  
   
   # # Render the MCA plot (Multiple Correspondence Analysis) using ggplotly
   # output$mca_plot <- renderPlotly({
