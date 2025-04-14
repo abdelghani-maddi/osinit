@@ -5,6 +5,6 @@ account: amcm
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14247395
-bundleId: 10108388
+bundleId: 10112066
 url: https://amcm.shinyapps.io/openit/
 version: 1

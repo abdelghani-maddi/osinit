@@ -105,13 +105,11 @@ data_pie <- data_pie %>% select(-any_of("0"))  # Remove any column named "0" (if
 perform_mca <- function(data) {
   d <- data %>%
     select(OrgName2, Nonprofit, Category, CommunityGovernance) %>%
-#    select(OrgName2, Nonprofit, audience, Focus, Category, CommunityGovernance) %>%
-    
     mutate(across(everything(), as.factor))  # Convert columns to factors for MCA
  
-row.names(d) <- d$OrgName2
+  row.names(d) <- d$OrgName2
 
-d <- d %>% select(-OrgName2)
+  d <- d %>% select(-OrgName2)
   
   acm <- dudi.acm(d, scannf = FALSE, nf = Inf)  # Perform MCA (ACM in R)
   list(acm = acm, d = d)  # Return results
@@ -135,14 +133,6 @@ arbre_phi2 <- perform_clustering(acm)
 #######################
 data$cluster <- cutree(arbre_phi2, 4)  # Cut the dendrogram into 5 clusters
 
-#######################
-# Update Google Sheets with the Cluster Data
-# #######################
-# # Define the URL for the Google Sheet to update
-# sheet_url <- "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494"
-# 
-# # Write the data (including cluster information) back to the Google Sheet
-# write_sheet(data, ss = sheet_url, sheet = "Clusters")
 
 #######################
 # Define Custom CSS for Popups in Leaflet Maps
@@ -154,48 +144,40 @@ popup_css <- "
 }
 "
 
-
-#######################
-# User Interface :)
-#######################
+# ================================================
+# User Interface - Open Science Initiatives Dashboard
+# ================================================
 
 ui <- dashboardPage(
   
-  # Dashboard header with title and customized width
+  # Header Section: Title and width setup
   dashboardHeader(
-    title = tags$strong("Open Science Initiatives"),  # Dashboard title
-    titleWidth = 450           # Custom width for the title
+    title = tags$strong("Open Science Initiatives"),  # Dashboard Title
+    titleWidth = 450                                  # Custom title width
   ),
   
-  # Sidebar (navigation menu)
+  # Sidebar Section: Navigation menu and logos
   dashboardSidebar(
     sidebarMenu(
-      # Menu item for the global overview view
+      # Navigation menu items
       menuItem("Global Overview", tabName = "overview", icon = icon("globe")),
-      
-      # Menu item for MCA & Clustering analysis
       menuItem("MCA & Clustering", tabName = "mca", icon = icon("chart-bar")),
-      
-      
-      # Menu item for "About" Page
       menuItem("About", tabName = "about", icon = icon("info-circle")),
-      
-
-      # Menu item for "FAQ" Page
       menuItem("FAQs", tabName = "FAQs", icon = icon("lightbulb")),
       
-            
-      # Add a clickable logo that redirects to an external link
+      # Clickable logo linking to external website (GEMASS)
       tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
                      target = "_blank", 
-                     tags$img(src = "logo.png", 
-                              height = "40px", 
-                              style = "margin: 0px 0 0px 0px; display: block;")
+                     tags$img(
+                       src = "logo.png", 
+                       height = "40px", 
+                       style = "margin: 0px 0 0px 0px; display: block;"
+                     )
               )
       ),
       
-      # Logo fixed at the bottom
+      # Fixed-position logo at the bottom for ANR link
       tags$div(
         tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
                tags$img(src = "logo_ANR.jpg", height = "40px", style = "margin: 10px;")
@@ -205,130 +187,74 @@ ui <- dashboardPage(
     )
   ),
   
-  # Body of the dashboard (different pages and visualizations)
+  # Body Section: Main visual content and layout
   dashboardBody(
     
-    # tags$head(
-    #   tags$script(src = "https://unpkg.com/leaflet-easyprint/dist/bundle.min.js")
-    # ),
-    tags$script(src = "https://unpkg.com/leaflet-easyprint/dist/bundle.min.js"),
-    tags$script(HTML("
-  Shiny.addCustomMessageHandler('downloadMap', function(message) {
-    var map = window.Leaflet.shinyMap[message.mapId];
-    if(map) {
-      L.easyPrint({
-        tileLayer: '',
-        filename: message.filename,
-        exportOnly: true,
-        hideControlContainer: true
-      }).addTo(map).printMap('CurrentSize', message.filename);
-    }
-  });
-")),
-    
-
     tags$head(
-      
-      # Ajouter des couleurs aux Tables de la barre latérale
+      # Custom Sidebar Hover Effects for each tab
       tags$style(HTML("
-    .sidebar-menu li:nth-child(1) a:hover {
-      background-color: #ba3470 !important;  /* Pink for Global Overview */
-      color: white !important;
-    }
-    .sidebar-menu li:nth-child(2) a:hover {
-      background-color: #17a2b8 !important;  /* Cyan for MCA & Clustering */
-      color: white !important;
-    }
-    .sidebar-menu li:nth-child(3) a:hover {
-      background-color: #ffc107 !important;  /* Yellow for About */
-      color: black !important;
-    }
-    .sidebar-menu li:nth-child(4) a:hover {
-      background-color: #8aa728 !important;  /* Green for FAQs */
-      color: white !important;
-    }
-    .sidebar-menu li:nth-child(5) a:hover {
-      background-color: #a72859 !important;  /* Blue for Logo */
-      color: white !important;
-    }
-    .sidebar-menu li:nth-child(6) a:hover {
-      background-color: #288aa7 !important;  /* Blue for Logo */
-      color: white !important;
-    }
-  ")),
-      
-      # Ajouter une limière qui suit la souris
-  #     tags$head(
-  #       tags$style(HTML("
-  #   #cursor-light {
-  #     position: absolute;
-  #     width: 120px;
-  #     height: 120px;
-  #     pointer-events: none;
-  #     border-radius: 50%;
-  #     background: radial-gradient(circle, rgba(160,32,240,0.3) 0%, rgba(160,32,240,0) 70%);
-  #     z-index: 999;
-  #     transform: translate(-50%, -50%);
-  #     opacity: 0;
-  #     transition: opacity 0.3s ease;
-  #   }
-  # ")),
-  #       tags$script(HTML("
-  #   $(document).ready(function() {
-  #     $('body').append('<div id=\"cursor-light\"></div>');
-  #     $(document).mousemove(function(e) {
-  #       $('#cursor-light').css({
-  #         left: e.pageX + 'px',
-  #         top: e.pageY + 'px',
-  #         opacity: 1
-  #       });
-  #     });
-  #     $(document).mouseleave(function() {
-  #       $('#cursor-light').css('opacity', 0);
-  #     });
-  #   });
-  # "))
-  #     )
-      
+        .sidebar-menu li:nth-child(1) a:hover {
+          background-color: #ba3470 !important;  /* Pink for Global Overview */
+          color: white !important;
+        }
+        .sidebar-menu li:nth-child(2) a:hover {
+          background-color: #17a2b8 !important;  /* Cyan for MCA & Clustering */
+          color: white !important;
+        }
+        .sidebar-menu li:nth-child(3) a:hover {
+          background-color: #ffc107 !important;  /* Yellow for About */
+          color: black !important;
+        }
+        .sidebar-menu li:nth-child(4) a:hover {
+          background-color: #8aa728 !important;  /* Green for FAQs */
+          color: white !important;
+        }
+        .sidebar-menu li:nth-child(5) a:hover {
+          background-color: #a72859 !important;  /* Pink for Logo */
+          color: white !important;
+        }
+        .sidebar-menu li:nth-child(6) a:hover {
+          background-color: #288aa7 !important;  /* Blue for Logo */
+          color: white !important;
+        }
+      "))
     ),
-    
     
     tabItems(
       
-      # Global overview (overview)
+      # --------------------------------------------
+      # Global Overview Tab
+      # --------------------------------------------
       tabItem(tabName = "overview",
               fluidRow(
-                # Box to display the total number of initiatives
+                # Total Initiatives Box
                 box(
                   title = "Global Open Science Initiatives",  
                   status = "primary",  
                   solidHeader = TRUE,  
-                  width = 4,  # Box width
-                  height = "521px",  
-                  style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);",  # Custom style
+                  width = 4,
+                  height = "521px",
+                  style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);",
                   tags$div(
-                    style = "text-align: center; padding-top: 50px;",  # Styling for internal div
-                    tags$i(class = "fa fa-lightbulb-o", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),  # Icon
+                    style = "text-align: center; padding-top: 50px;",
+                    tags$i(class = "fa fa-lightbulb-o", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
                     tags$div(
-                      style = "font-size: 100px; font-weight: bold; color: #007bff;", 
-                      textOutput("distinct_initiatives")  # Dynamically display the number of distinct initiatives
+                      style = "font-size: 100px; font-weight: bold; color: #007bff;",
+                      textOutput("distinct_initiatives")
                     ),
                     tags$div(
                       style = "font-size: 25px; font-weight: bold; color: #333;",
-                      "Total Number of Initiatives"  # Label below the number of initiatives
+                      "Total Number of Initiatives"
                     ),
-                    tags$p(
-                      style = "font-size: 15px; margin-top: 10px; color: #555;"
-                    ),
-                    # Clickable link to access and enrich the data
+                    tags$p(style = "font-size: 15px; margin-top: 10px; color: #555;"),
+                    # Links to data and contribution forms
                     tags$a(
-                      href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1136935931#gid=1136935931",
+                      href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit#gid=1136935931",
                       target = "_blank",
                       "🔗 Access and Download Data",
                       style = "color: #ffffff; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px; 
                                background-color: #007bff; border-radius: 10px; font-size: 16px;"
                     ),
-                    
                     tags$a(
                       href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
                       target = "_blank",
@@ -339,27 +265,27 @@ ui <- dashboardPage(
                   )
                 ),
                 
-                # Box to display initiatives by category
+                # Initiatives by Category Chart Box
                 box(
                   title = "Initiatives by Category", 
                   status = "info", 
                   solidHeader = TRUE, 
                   width = 8,
-                  plotlyOutput("category_plot"),  # Display Plotly interactive chart
+                  plotlyOutput("category_plot"),
                   tags$p(
-                    "This bar chart provides an overview of the number of initiatives grouped by their focus area. The categories include Journals and Publication Models, Open Science and Policies, Tools and Research Services, Community and Education, Preprints and Repositories, and Data and Infrastructure. Hover over each bar to view detailed counts, or click on a bar to explore the specific initiatives within the selected category."
+                    "This bar chart provides an overview of the number of initiatives grouped by their focus area. Hover over each bar to view detailed counts, or click on a bar to explore the specific initiatives within the selected category."
                   )
                 )
               ),
               
-              # Row to display the list of selected initiatives
+              # Selected Initiatives List Box
               fluidRow(
                 box(
-                  title = "Selected Initiatives List",  
-                  status = "info",  
-                  solidHeader = TRUE,  
-                  width = 12,  
-                  uiOutput("clicked_initiatives"),  # Dynamically display the list of selected initiatives
+                  title = "Selected Initiatives List",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 12,
+                  uiOutput("clicked_initiatives"),
                   tags$p(
                     "Click on a bar above to view the initiatives belonging to the selected category.",
                     style = "color: #555;"
@@ -367,7 +293,7 @@ ui <- dashboardPage(
                 )
               ),
               
-              # Row to display the global distribution map of initiatives and the community governance map
+              # Maps for Distribution and Governance
               fluidRow(
                 column(
                   width = 6,
@@ -376,15 +302,13 @@ ui <- dashboardPage(
                     status = "success",
                     solidHeader = TRUE,
                     width = NULL,
-                    leafletOutput("world_map"),  # Interactive map with Leaflet
-                    tags$style(HTML(popup_css)),  # CSS style for map popup
+                    leafletOutput("world_map"),
+                    tags$style(HTML(popup_css)),
                     tags$p(
                       "This map visualizes the geographical distribution of open science initiatives around the world. Click on the bubbles to view the number of initiatives per country and a list of the specific projects."
-                    ),
-                    actionButton("save_worldmap", "📥 Download World Map", icon = icon("download"),
-                                 style = "margin-top:10px; background-color:#007bff; color:white;")
+                    )
                   )
-                ), 
+                ),
                 column(
                   width = 6,
                   box(
@@ -392,108 +316,82 @@ ui <- dashboardPage(
                     status = "warning",
                     solidHeader = TRUE,
                     width = NULL,
-                    leafletOutput("comm_gov"),  # Another map to show governance data
+                    leafletOutput("comm_gov"),
                     tags$p(
                       "This map displays a comparison of community governance practices in open science initiatives. The pie charts represent the proportion of initiatives with and without community-driven governance structures."
-                    ),
-                    actionButton("save_commgov", "📥 Download Governance Map", icon = icon("download"),
-                                 style = "margin-top:10px; background-color:#007bff; color:white;")
-                    
+                    )
                   )
                 )
               )
       ),
       
-      # MCA & Clustering analysis page
+      # --------------------------------------------
+      # MCA & Clustering Tab
+      # --------------------------------------------
       tabItem(tabName = "mca",
               fluidRow(
+                # MCA Plot: NonProfit
                 box(
-                      title = "Multiple Correspondence Analysis (MCA): NonProfit",
-                      status = "primary",
-                      solidHeader = TRUE,
-                      width = 12,
-                      uiOutput("mca_plot_ui"),  # Utilisation d'uiOutput pour afficher le plot explor
-                      
-                      tags$p(
-                        "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives. Each point represents an initiative, and the colors indicate whether the initiative is a nonprofit or not, highlighting potential differences in their positioning along these two axes."
-                      )
-                    ),
+                  title = "Multiple Correspondence Analysis (MCA): NonProfit",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 12,
+                  uiOutput("mca_plot_ui"),
+                  tags$p(
+                    "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives."
+                  )
+                ),
                 
+                # MCA Plot: Category
                 box(
                   title = "Multiple Correspondence Analysis (MCA): Category",
                   status = "primary",
                   solidHeader = TRUE,
                   width = 12,
-                  uiOutput("mca_plot_ui2"),  # Utilisation d'uiOutput pour afficher le plot explor
-                  
+                  uiOutput("mca_plot_ui2"),
                   tags$p(
-                    "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions. Each point represents an open science initiative, and the colors differentiate the initiatives based on their category (e.g., open-source, community-driven). This visualization helps to explore how the category influences the distribution of initiatives in the multidimensional space."
+                    "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
                   )
                 ),
                 
-                # Column to display the hierarchical clustering dendrogram
+                # Hierarchical Clustering Dendrogram
                 box(
                   title = "Hierarchical Clustering Dendrogram",
                   status = "danger",
                   solidHeader = TRUE,
                   width = 12,
-                  plotlyOutput("dendrogram"),  # Dendrogram plot output
+                  plotlyOutput("dendrogram"),
                   tags$p(
-                    "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. The clusters provide insight into how similar initiatives group together based on shared attributes."
+                    "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
                   )
                 )
               ),
               
+              # External Link to Cluster Table
               fluidRow(
-                # Box with a link to explore the clusters further
                 box(
                   title = "View Clusters",
                   status = "info",
                   solidHeader = TRUE,
                   width = 12,
-                  style = "
-      cursor: pointer;
-      text-align: center;
-      font-size: 18px;
-      border-radius: 15px;
-      border: 1px solid #007bff;
-      padding: 20px;
-      transition: all 0.3s ease-in-out;
-      color: white;
-    ",
+                  style = "cursor: pointer; text-align: center; font-size: 18px; border-radius: 15px; border: 1px solid #007bff; padding: 20px; transition: all 0.3s ease-in-out; color: white;",
                   tags$a(
                     href = "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494",
                     target = "_blank",
                     "📊 Access Clusters on Google Sheets",
-                    style = "
-        color: #ffffff;
-        text-decoration: none;
-        display: inline-block;
-        padding: 15px 30px;
-        background-color: #007bff;
-        border-radius: 10px;
-        font-weight: bold;
-        font-size: 16px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-        transition: background-color 0.3s ease;
-      "
+                    style = "color: #ffffff; text-decoration: none; display: inline-block; padding: 15px 30px; background-color: #007bff; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease;"
                   ),
                   tags$p(
                     "Click the link above to explore the clustering results in more detail, including which initiatives belong to each cluster.",
-                    style = "
-        margin-top: 15px;
-        font-size: 16px;
-        line-height: 1.6;
-        color: #0a0303;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-      "
+                    style = "margin-top: 15px; font-size: 16px; line-height: 1.6; color: #0a0303; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);"
                   )
                 )
               )
-              
       ),
-      # "About" tab
       
+      # --------------------------------------------
+      # About Tab
+      # --------------------------------------------
       tabItem(tabName = "about",
               fluidRow(
                 div(
@@ -502,15 +400,16 @@ ui <- dashboardPage(
                   tags$iframe(
                     src = "https://docs.google.com/document/d/163di4K3TfQqM-zqEc7IrxB7SCnhiZPn0pK-fbQrIftQ/preview",
                     width = "100%",
-                    height = "800px",  # Ajuste la hauteur de l'iframe selon le besoin
+                    height = "800px",
                     style = "border: none;"
                   )
                 )
               )
       ),
       
-      # "FAQ" tab
-      
+      # --------------------------------------------
+      # FAQs Tab
+      # --------------------------------------------
       tabItem(tabName = "FAQs",
               fluidRow(
                 div(
@@ -519,18 +418,19 @@ ui <- dashboardPage(
                   tags$iframe(
                     src = "https://docs.google.com/document/d/1F0CrXoXABLvmHDQO3ChrjtR_u9g7Zz5K4tzziCTsqEQ/preview",
                     width = "100%",
-                    height = "800px",  # Ajuste la hauteur de l'iframe selon le besoin
+                    height = "800px",
                     style = "border: none;"
                   )
                 )
               )
-      )      
-    )
+      )
     )
   )
+)
 
-
-# # Ajout de l'icône dans la section head
+# --------------------------------------------
+# Favicon and Browser Tab Title
+# --------------------------------------------
 ui <- tagList(
   tags$head(
     tags$link(rel = "icon", type = "image/png", href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
@@ -540,43 +440,39 @@ ui <- tagList(
 )
 
 
-
-#######################
-# Server part
-#######################
-
+# =============================================
+# Server Logic - Open Science Initiatives Dashboard
+# =============================================
 
 server <- function(input, output, session) {
-
-  # Rendering the logo image in the UI
-  output$logo_image <- renderImage({
-    list(src = "www/logo.png",  # Path to the logo image
-         alt = "Logo OS Initiatives",  # Alt text for the image
-         height = "70px",  # Set the height of the logo
-         width = "auto")  # Set width to auto to maintain aspect ratio
-      }, deleteFile = FALSE)  # Ensure the image file is not deleted after rendering
   
-  # Reactive poll to update the data every 10 minutes (600000 ms)
-  data_reactive <- reactivePoll(600000, session,
-                                checkFunc = function() { Sys.time() },  # Function to check if the time has changed
-                                valueFunc = function() { download_data() }  # Function to download new data when time changes
+  # Render the GEMASS logo image in the sidebar
+  output$logo_image <- renderImage({
+    list(
+      src = "www/logo.png",          # Path to the logo image
+      alt = "Logo OS Initiatives",   # Alt text for accessibility
+      height = "70px",               # Fixed height for display
+      width = "auto"                 # Auto width to preserve ratio
+    )
+  }, deleteFile = FALSE)             # Prevent deletion after rendering
+  
+  # Reactive polling: auto-refresh the data every 10 minutes
+  data_reactive <- reactivePoll(
+    600000, session,
+    checkFunc = function() { Sys.time() },         # Dummy check (forces periodic refresh)
+    valueFunc = function() { download_data() }     # Function to download and return new data
   )
   
-  # Output: Calculate the number of distinct initiatives and display it
+  # Output: display the number of distinct initiatives in the UI
   output$distinct_initiatives <- renderText({
-    data <- data_reactive()  # Get the most recent data
-    n_distinct(data$OrgName2)  # Count the number of distinct initiatives based on the 'OrgName2' column
+    data <- data_reactive()  # Get the latest data snapshot
+    n_distinct(data$OrgName2)  # Count distinct initiatives
   })
   
-  # Data reactive
-  data_reactive <- reactive({
-    data
-  })
+  # Reactive placeholder for selection handling
+  selected_category <- reactiveVal(NULL)  # Stores user-selected category from the chart
   
-  # Reactive value for selection
-  selected_category <- reactiveVal(NULL)
-  
-  # Reactive table of categories with counts and wrapped labels (used for plotting and indexing)
+  # Generate a category count table for plotting
   plotted_categories <- reactive({
     data <- data_reactive()
     data %>%
@@ -588,7 +484,7 @@ server <- function(input, output, session) {
       )
   })
   
-  # Plot
+  # Render the category distribution plot with Plotly
   output$category_plot <- renderPlotly({
     cat_data <- plotted_categories()
     
@@ -603,17 +499,21 @@ server <- function(input, output, session) {
         axis.title.y = element_text(margin = margin(r = 10))
       ) +
       scale_fill_brewer(palette = "Set3") +
-      labs(x = "Category", y = "Number of Initiatives", title = "Number of Initiatives by Category")
+      labs(
+        x = "Category",
+        y = "Number of Initiatives",
+        title = "Number of Initiatives by Category"
+      )
     
     ggplotly(p, tooltip = "none", source = "select_bar")
   })
   
-  # Selection from click
+  # Detect and handle click events on the Plotly bar chart
   observeEvent(event_data("plotly_click", source = "select_bar"), {
     click_data <- event_data("plotly_click", source = "select_bar")
     
     if (!is.null(click_data)) {
-      index <- round(click_data$x) #  # plotly index starts at 0
+      index <- round(click_data$x)  # Plotly index starts at 0
       categories <- plotted_categories()
       
       if (index >= 1 && index <= nrow(categories)) {
@@ -626,26 +526,27 @@ server <- function(input, output, session) {
     }
   })
   
-  # UI output
+  # Render the list of initiatives corresponding to the selected category
   output$clicked_initiatives <- renderUI({
     data <- data_reactive()
     
     if (is.null(selected_category())) {
-      return(tags$p("Click on a bar in the chart to view the corresponding initiatives.", style = "color: #999;"))
+      return(tags$p(
+        "Click on a bar in the chart to view the corresponding initiatives.",
+        style = "color: #999;"
+      ))
     }
     
     filtered_data <- data %>% filter(Category == selected_category())
-    
     cat("Selected category after update:", selected_category(), "\n")
     cat("Number of rows after filtering:", nrow(filtered_data), "\n")
     
     DT::dataTableOutput("initiatives_table")
   })
   
-  # Table output
+  # Render the filtered initiatives table
   output$initiatives_table <- DT::renderDataTable({
     filtered_data <- data_reactive() %>% filter(Category == selected_category())
-    
     DT::datatable(
       filtered_data %>% select(OrgName, Category, Country, CommunityGovernance, Nonprofit, OpenSource),
       options = list(pageLength = 5, autoWidth = TRUE),
@@ -653,46 +554,9 @@ server <- function(input, output, session) {
     )
   })
   
-    
-  #####
-  # Render the world map with Leaflet, showing initiatives by country
-  # output$world_map <- renderLeaflet({
-  #   data <- data_reactive()  # Get the most recent data
-  # 
-  #   # Create a Leaflet map to visualize initiatives by country
-  #   leaflet(initiatives_par_pays) %>%
-  #     addTiles() %>%  # Add default OpenStreetMap tiles
-  #     addCircleMarkers(
-  #       lng = ~Longitude, lat = ~Latitude,  # Use longitude and latitude for marker positions
-  #       radius = ~sqrt(nb) * 2,  # Size of the markers proportional to the square root of the count
-  #       color = ~colorNumeric("plasma", nb)(nb),  # Color based on the number of initiatives
-  #       fillOpacity = 0.8,  # Set the fill opacity of the circles
-  #       popup = ~paste(
-  #         "<b>Country :</b>", Country, "<br>",  # Popup displaying country and count information
-  #         "<b>Count :</b>", nb, "<br>",
-  #         "<b>Initiatives list :</b><br>", liste_initiatives
-  #       ),
-  #       popupOptions = popupOptions(className = "custom-popup")  # Custom popup options
-  #     ) %>%
-  #     addLegend(
-  #       "bottomright",  # Position of the legend
-  #       pal = colorNumeric("plasma", initiatives_par_pays$nb),  # Color palette for legend
-  #       values = initiatives_par_pays$nb,  # Legend values
-  #       title = "Initiatives Count"  # Title of the legend
-  #     ) %>%
-  #     setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),  # Set initial map view
-  #             lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
-  #             zoom = 2)  # Zoom level
-  #   
-  #   })
-  observeEvent(input$save_worldmap, {
-    session$sendCustomMessage("downloadMap", list(
-      mapId = "world_map",
-      filename = "OpenScience_Map"
-    ))
-  })  
+  # Render the world map with circle markers representing initiative counts
   output$world_map <- renderLeaflet({
-    data <- data_reactive()  # Get the most recent data
+    data <- data_reactive()
     
     map <- leaflet(initiatives_par_pays) %>%
       addTiles() %>%
@@ -719,35 +583,9 @@ server <- function(input, output, session) {
         lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
         zoom = 2
       )
-    
   })
   
-
-  # Render the map with pie charts representing community governance in each country
-  # output$comm_gov <- renderLeaflet({
-  #   data <- data_reactive()  # Get the most recent data
-  #   
-  #   leaflet() %>%
-  #     addTiles() %>%  # Add default OpenStreetMap tiles
-  #     addMinicharts(
-  #       lng = data_pie$Longitude, lat = data_pie$Latitude,  # Position of pie charts
-  #       type = "pie",  # Pie chart type
-  #       chartdata = data_pie[, c("Yes", "No")],  # Data for the Yes/No values in the pie chart
-  #       colorPalette = c("blue", "red"),  # Blue for Yes and Red for No
-  #       width = 30, height = 30,  # Size of the pie charts
-  #       opacity = 0.8  # Opacity of the pie charts
-  #     ) %>%
-  #     setView(lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
-  #             lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
-  #             zoom = 2)  # Set the initial map view and zoom level
-  # })    
-  observeEvent(input$save_commgov, {
-    session$sendCustomMessage("downloadMap", list(
-      mapId = "comm_gov",
-      filename = "Community_Governance_Map"
-    ))
-  })
-  
+  # Render the governance map with pie charts
   output$comm_gov <- renderLeaflet({
     data <- data_reactive()
     
@@ -766,109 +604,98 @@ server <- function(input, output, session) {
         lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
         zoom = 2
       )
-    
   })
   
-  
-  # # Render the MCA plot (Multiple Correspondence Analysis) using ggplotly
-  # output$mca_plot <- renderPlotly({
-  #   data <- data_reactive()  # Get the most recent data
-  #   
-  #   # Create a MCA plot using fviz_mca_ind
-  #   p1 <- fviz_mca_ind(acm, geom = "point", alpha.ind = .25, habillage = mca_results$d$CommunityGovernance, addEllipses = TRUE, repel = TRUE) +
-  #     theme_minimal()  # Use a minimal theme for the plot
-  #   ggplotly(p1)  # Convert the ggplot to a Plotly interactive plot
-  # })
-  
-
-  # Perform MCA once (using your existing data processing)
+  # Reactive computation of MCA (Multiple Correspondence Analysis) results
   mca_results <- reactive({
-    perform_mca(data_reactive())  # Utilise ta fonction existante pour calculer l'ACM
+    perform_mca(data_reactive())  # Calls your custom MCA computation function
   })
   
-  # Préparation et affichage du graphique avec les bonnes étiquettes
+  # Render the MCA plot for NonProfit dimension
   output$mca_plot_ui <- renderUI({
-    acm_object <- mca_results()$acm   # Récupérer l'objet ACM
-    d <- mca_results()$d  # Récupérer les données originales utilisées pour l'ACM
+    acm_object <- mca_results()$acm
+    d <- mca_results()$d
     
-    # Ajouter les noms de lignes ou une colonne pour étiqueter les points
-    rownames(acm_object$li) <- rownames(d)  # Associer les étiquettes d'origine aux points
-    
-    # Convertir l'objet ACM pour explor avec les étiquettes
+    rownames(acm_object$li) <- rownames(d)  # Sync labels with source data
     res <- prepare_results(acm_object)
     
-    # Affichage interactif avec les étiquettes correctes
-    MCA_ind_plot(res, 
-                         xax = 1, yax = 2, ind_sup = FALSE, lab_var = "Lab",
-                         ind_lab_min_contrib = 0, col_var = "Nonprofit", 
-                         labels_size = 7, point_opacity = 0.5, 
-                         opacity_var = NULL, point_size = 64, ellipses = FALSE,
-                         transitions = TRUE, labels_positions = "auto", 
-                         xlim = c(-2.27, 2.39), ylim = c(-1.46, 1.5))
+    MCA_ind_plot(res,
+                 xax = 1, yax = 2,
+                 ind_sup = FALSE,
+                 lab_var = "Lab",
+                 ind_lab_min_contrib = 0,
+                 col_var = "Nonprofit",
+                 labels_size = 7,
+                 point_opacity = 0.5,
+                 opacity_var = NULL,
+                 point_size = 64,
+                 ellipses = FALSE,
+                 transitions = TRUE,
+                 labels_positions = "auto",
+                 xlim = c(-2.27, 2.39),
+                 ylim = c(-1.46, 1.5))
   })
   
-  
-  # Préparation et affichage du graphique avec les bonnes étiquettes
+  # Render the MCA plot for Category dimension
   output$mca_plot_ui2 <- renderUI({
-    acm_object <- mca_results()$acm   # Récupérer l'objet ACM
-    d <- mca_results()$d  # Récupérer les données originales utilisées pour l'ACM
+    acm_object <- mca_results()$acm
+    d <- mca_results()$d
     
-    # Ajouter les noms de lignes ou une colonne pour étiqueter les points
-    rownames(acm_object$li) <- rownames(d)  # Associer les étiquettes d'origine aux points
-    
-    # Convertir l'objet ACM pour explor avec les étiquettes
+    rownames(acm_object$li) <- rownames(d)
     res <- explor::prepare_results(acm_object)
     
-    # Affichage interactif avec les étiquettes correctes
-    MCA_ind_plot(res, 
-                         xax = 1, yax = 2, ind_sup = FALSE, lab_var = "Lab",
-                         ind_lab_min_contrib = 0, col_var = "Category", 
-                         labels_size = 7, point_opacity = 0.5, 
-                         opacity_var = NULL, point_size = 64, ellipses = FALSE,
-                         transitions = TRUE, labels_positions = "auto", 
-                         xlim = c(-2.27, 2.39), ylim = c(-1.46, 1.5))
+    MCA_ind_plot(res,
+                 xax = 1, yax = 2,
+                 ind_sup = FALSE,
+                 lab_var = "Lab",
+                 ind_lab_min_contrib = 0,
+                 col_var = "Category",
+                 labels_size = 7,
+                 point_opacity = 0.5,
+                 opacity_var = NULL,
+                 point_size = 64,
+                 ellipses = FALSE,
+                 transitions = TRUE,
+                 labels_positions = "auto",
+                 xlim = c(-2.27, 2.39),
+                 ylim = c(-1.46, 1.5))
   })
   
-  # Render the dendrogram (cluster analysis) plot
+  # Render the dendrogram for hierarchical clustering
   output$dendrogram <- renderPlotly({
-    data <- data_reactive()  # Get the most recent data
-    
-    # Create a dendrogram using factoextra::fviz_dend
-    p1 <- factoextra::fviz_dend(
-      arbre_phi2,  # Input tree structure for clustering
-      show_labels = TRUE,  # Show labels for each cluster
-      k = 4,  # Cut the dendrogram into 4 clusters
-      rect = TRUE  # Display rectangles around clusters
-    ) +
-      ggplot2::ggtitle("Dendrogram (cut into 4 clusters)") +  # Title of the plot
-      theme_minimal() +  # Use a minimal theme
-      theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate the x-axis labels for better readability
-    
-    ggplotly(p1)  # Convert the ggplot to a Plotly interactive plot
-  }) 
-  
-  
-  
-  
-  observeEvent(data_reactive(), {
-    # Récupération des données actualisées
     data <- data_reactive()
     
-    # Ajout du clustering
+    p1 <- factoextra::fviz_dend(
+      arbre_phi2,
+      show_labels = TRUE,
+      k = 4,
+      rect = TRUE
+    ) +
+      ggplot2::ggtitle("Dendrogram (cut into 4 clusters)") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    
+    ggplotly(p1)
+  })
+  
+  # Observe new data, compute clusters and sync to Google Sheets
+  observeEvent(data_reactive(), {
+    data <- data_reactive()
+    
     clustered_data <- data %>%
       mutate(cluster = cutree(arbre_phi2, k = 4))
     
-    # Écriture dans Google Sheet
     sheet_id <- "1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8"
     write_sheet(clustered_data, ss = sheet_id, sheet = "Clusters")
     
-    cat("✅ Clusters mis à jour dans Google Sheet.\n")
+    cat("✅ Clusters updated in Google Sheet.\n")
   })
-   
+  
 }
 
-# To deploy the app locally
+# Launch the application
 shinyApp(ui = ui, server = server)
+
 
 # To deploy the app online 
 # rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
