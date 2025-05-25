@@ -144,6 +144,13 @@ popup_css <- "
 }
 "
 
+#######################
+monitoring_data <- function() {
+  read_sheet("https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo", sheet = "Monitors")
+}
+#######################
+
+
 # ================================================
 # User Interface - Open Science Initiatives Dashboard
 # ================================================
@@ -162,8 +169,22 @@ ui <- dashboardPage(
       # Navigation menu items
       menuItem("Global Overview", tabName = "overview", icon = icon("globe")),
       menuItem("MCA & Clustering", tabName = "mca", icon = icon("chart-bar")),
+      menuItem("Monitoring Landscape", tabName = "monitoring", icon = icon("table")),
       menuItem("About", tabName = "about", icon = icon("info-circle")),
       menuItem("FAQs", tabName = "FAQs", icon = icon("lightbulb")),
+    
+      
+      # Clickable logo linking to external website (OSMI)
+      tags$li(class = "dropdown", 
+              tags$a(href = "https://open-science-monitoring.org/", 
+                     target = "_blank", 
+                     tags$img(
+                       src = "logo-osmi.png", 
+                       height = "40px", 
+                       style = "margin: 0px 0 0px 0px; display: block;"
+                     )
+              )
+      ),
       
       # Clickable logo linking to external website (GEMASS)
       tags$li(class = "dropdown", 
@@ -176,6 +197,7 @@ ui <- dashboardPage(
                      )
               )
       ),
+      
       
       # Fixed-position logo at the bottom for ANR link
       tags$div(
@@ -215,6 +237,10 @@ ui <- dashboardPage(
         }
         .sidebar-menu li:nth-child(6) a:hover {
           background-color: #288aa7 !important;  /* Blue for Logo */
+          color: white !important;
+        }
+        .sidebar-menu li:nth-child(7) a:hover {
+          background-color: #8aa728 !important;  /* Pink for Global Overview */
           color: white !important;
         }
       "))
@@ -388,6 +414,32 @@ ui <- dashboardPage(
                 )
               )
       ),
+      
+      # --------------------------------------------
+      # Monitoring Tab
+      # --------------------------------------------
+      tabItem(tabName = "monitoring",
+              fluidRow(
+                box(
+                  title = "Open Science Monitoring Initiatives",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 12,
+                  DT::dataTableOutput("monitoring_table"),
+                  tags$p(
+                    "This interactive table lists various national, international, institutional, and specialized initiatives monitoring open science. Click on a column header to sort or use the search bar to filter."
+                  ),
+                  tags$a(
+                    href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1576141174#gid=1576141174",
+                    target = "_blank",
+                    "📥 View or edit full Google Sheet here",
+                    style = "display:inline-block; margin-top:10px; font-size:16px;"
+                  )
+                )
+              )
+      ),
+      
+      
       
       # --------------------------------------------
       # About Tab
@@ -691,7 +743,53 @@ server <- function(input, output, session) {
     cat("✅ Clusters updated in Google Sheet.\n")
   })
   
+  #############################
+  output$monitoring_table <- DT::renderDataTable({
+    df <- monitoring_data()
+    
+    # ✨ Lien cliquable avec icône
+    df$Link <- ifelse(
+      is.na(df$Link) | df$Link == "",
+      "",
+      paste0("<a href='", df$Link, "' target='_blank'><i class='fa fa-external-link-alt'></i> Visit</a>")
+    )
+    
+    # ✨ Badges de type
+    df$Type <- case_when(
+      df$Type == "National" ~ "<span class='badge badge-primary'>National</span>",
+      df$Type == "International" ~ "<span class='badge badge-success'>International</span>",
+      df$Type == "Funder" ~ "<span class='badge badge-warning'>Funder</span>",
+      df$Type == "Institutional" ~ "<span class='badge badge-info'>Institution</span>",
+      df$Type == "Publisher" ~ "<span class='badge badge-danger'>Publisher</span>",
+      df$Type == "Specialised" ~ "<span class='badge badge-secondary'>Specialised</span>",
+      TRUE ~ as.character(df$Type)
+    )
+    
+    DT::datatable(
+      df,
+      escape = FALSE,
+      rownames = FALSE,
+      options = list(
+        pageLength = 10,
+        autoWidth = TRUE,
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel'),
+        columnDefs = list(
+          list(className = 'dt-center', targets = "_all"),
+          list(width = '25%', targets = 0),  # Initiative
+          list(width = '10%', targets = 1),  # Type
+          list(width = '10%', targets = 2),  # Link
+          list(width = '55%', targets = 3)   # Description
+        )
+      ),
+      class = 'cell-border stripe hover nowrap'
+    )
+  })
+  
+  
+  
 }
+
 
 # Launch the application
 shinyApp(ui = ui, server = server)
