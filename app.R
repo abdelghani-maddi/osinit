@@ -243,7 +243,24 @@ ui <- dashboardPage(
           background-color: #8aa728 !important;  /* Pink for Global Overview */
           color: white !important;
         }
-      "))
+      ")),
+    
+      tags$style(HTML("
+  .badge {
+    font-size: 12px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    color: white;
+  }
+  .badge-primary { background-color: #007bff; }
+  .badge-success { background-color: #28a745; }
+  .badge-warning { background-color: #ffc107; color: black; }
+  .badge-info    { background-color: #17a2b8; }
+  .badge-danger  { background-color: #dc3545; }
+  .badge-secondary { background-color: #6c757d; }
+  table.dataTable td { vertical-align: middle; }
+"))
+      
     ),
     
     tabItems(
