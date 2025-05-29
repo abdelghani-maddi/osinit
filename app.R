@@ -149,6 +149,7 @@ monitoring_data <- function() {
   read_sheet("https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo", sheet = "Monitors")
 }
 #######################
+nordic_initiatives <- read_sheet("https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo", sheet = "Focus")
 
 
 # ================================================
@@ -259,7 +260,35 @@ ui <- dashboardPage(
   .badge-danger  { background-color: #dc3545; }
   .badge-secondary { background-color: #6c757d; }
   table.dataTable td { vertical-align: middle; }
+  ")),
+      
+      tags$style(HTML("
+  .btn-visit {
+    background-color: #007bff;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 12px;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+  }
+
+  .btn-visit:hover {
+    background-color: #0056b3;
+    text-decoration: none;
+  }
+
+  table.dataTable td {
+    vertical-align: middle;
+    font-size: 14px;
+  }
+
+  table.dataTable th {
+    font-weight: bold;
+  }
 "))
+      
       
     ),
     
@@ -453,7 +482,24 @@ ui <- dashboardPage(
                     style = "display:inline-block; margin-top:10px; font-size:16px;"
                   )
                 )
+              ),
+              
+              fluidRow(
+                box(
+                  title = tagList(icon("snowflake"), "Nordic Focus: Open Science Initiatives"),
+                  width = 12,
+                  status = "primary",
+                  solidHeader = TRUE,
+                  collapsible = TRUE,
+                  collapsed = FALSE,
+                  DT::dataTableOutput("nordic_focus_table"),
+                  tags$p(
+                    "This table presents major open science initiatives from Nordic countries, including national dashboards, infrastructures, funding programmes, and collaborative platforms. It offers an entry point to explore regional efforts and synergies in open science.",
+                    style = "margin-top:10px; font-size:15px;"
+                  )
+                )
               )
+              
       ),
       
       
@@ -800,6 +846,54 @@ server <- function(input, output, session) {
         )
       ),
       class = 'cell-border stripe hover nowrap'
+    )
+  })
+  
+  #################################################
+  output$nordic_focus_table <- DT::renderDataTable({
+    df <- nordic_initiatives
+    
+    # Ajout d’un drapeau en fonction du pays
+    df$`Country/Region` <- case_when(
+      df$`Country/Region` == "Finland" ~ "🇫🇮 Finland",
+      df$`Country/Region` == "Norway" ~ "🇳🇴 Norway",
+      df$`Country/Region` == "Sweden" ~ "🇸🇪 Sweden",
+      df$`Country/Region` == "Denmark" ~ "🇩🇰 Denmark",
+      df$`Country/Region` == "Iceland" ~ "🇮🇸 Iceland",
+      str_detect(df$`Country/Region`, "Nordic") ~ "🌐 Nordic Region",
+      str_detect(df$`Country/Region`, "DK|FI|NO|SE") ~ "🌍 DK / FI / NO / SE",
+      TRUE ~ df$`Country/Region`
+    )
+    
+    # Lien en bouton "Visit"
+    df$Link <- ifelse(
+      is.na(df$Link) | df$Link == "",
+      "",
+      paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
+    )
+    
+    # Reordering columns for clarity
+    df <- df %>% select(Initiative, `Country/Region`, Type, Description, Link)
+    
+    DT::datatable(
+      df,
+      escape = FALSE,
+      rownames = FALSE,
+      extensions = 'Responsive',
+      options = list(
+        pageLength = 10,
+        autoWidth = TRUE,
+        responsive = TRUE,
+        columnDefs = list(
+          list(className = 'dt-left', targets = "_all"),
+          list(width = '25%', targets = 0),
+          list(width = '15%', targets = 1),
+          list(width = '15%', targets = 2),
+          list(width = '35%', targets = 3),
+          list(width = '10%', targets = 4)
+        )
+      ),
+      class = 'display nowrap compact stripe'
     )
   })
   
