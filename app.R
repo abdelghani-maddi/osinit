@@ -487,7 +487,7 @@ ui <- dashboardPage(
               
               fluidRow(
                 box(
-                  title = tagList(icon("snowflake"), "Nordic Focus: Open Science Initiatives"),
+                  title = tagList(icon("globe"), "Focus by country/region: Open Science Initiatives"),
                   width = 12,
                   status = "primary",
                   solidHeader = TRUE,
@@ -497,6 +497,12 @@ ui <- dashboardPage(
                   tags$p(
                     "This table presents major open science initiatives from Nordic countries, including national dashboards, infrastructures, funding programmes, and collaborative platforms. It offers an entry point to explore regional efforts and synergies in open science.",
                     style = "margin-top:10px; font-size:15px;"
+                  ),
+                  tags$a(
+                    href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=2146313781#gid=2146313781",
+                    target = "_blank",
+                    "📥 View or edit full Google Sheet here",
+                    style = "display:inline-block; margin-top:10px; font-size:16px;"
                   )
                 )
               )
@@ -811,14 +817,14 @@ server <- function(input, output, session) {
   output$monitoring_table <- DT::renderDataTable({
     df <- monitoring_data()
     
-    # ✨ Lien cliquable avec icône
+    # Lien cliquable avec icône
     df$Link <- ifelse(
       is.na(df$Link) | df$Link == "",
       "",
       paste0("<a href='", df$Link, "' target='_blank'><i class='fa fa-external-link-alt'></i> Visit</a>")
     )
     
-    # ✨ Badges de type
+    # Badges de type
     df$Type <- case_when(
       df$Type == "National" ~ "<span class='badge badge-primary'>National</span>",
       df$Type == "International" ~ "<span class='badge badge-success'>International</span>",
@@ -846,7 +852,8 @@ server <- function(input, output, session) {
           list(width = '55%', targets = 3)   # Description
         )
       ),
-      class = 'cell-border stripe hover nowrap'
+      #class = 'cell-border stripe hover nowrap' 
+      class = 'display nowrap compact stripe'
     )
   })
   
@@ -906,11 +913,7 @@ server <- function(input, output, session) {
       ),
       class = 'display nowrap compact stripe'
     )
-  })
-  
-  
-  
-  
+  }) 
 }
 
 
