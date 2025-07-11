@@ -401,42 +401,172 @@ ui <- dashboardPage(
       # --------------------------------------------
       # MCA & Clustering Tab
       # --------------------------------------------
+      # tabItem(tabName = "mca",
+      #         fluidRow(
+      #           # MCA Plot: NonProfit
+      #           box(
+      #             title = "Multiple Correspondence Analysis (MCA): NonProfit",
+      #             status = "primary",
+      #             solidHeader = TRUE,
+      #             width = 12,
+      #             uiOutput("mca_plot_ui"),
+      #             tags$p(
+      #               "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives."
+      #             )
+      #           ),
+      #           
+      #           # MCA Plot: Category
+      #           box(
+      #             title = "Multiple Correspondence Analysis (MCA): Category",
+      #             status = "primary",
+      #             solidHeader = TRUE,
+      #             width = 12,
+      #             uiOutput("mca_plot_ui2"),
+      #             tags$p(
+      #               "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
+      #             )
+      #           ),
+      #           
+      #           # Hierarchical Clustering Dendrogram
+      #           box(
+      #             title = "Hierarchical Clustering Dendrogram",
+      #             status = "danger",
+      #             solidHeader = TRUE,
+      #             width = 12,
+      #             plotlyOutput("dendrogram"),
+      #             tags$p(
+      #               "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
+      #             )
+      #           )
+      #         ),
+      #         
+      #         # External Link to Cluster Table
+      #         fluidRow(
+      #           box(
+      #             title = "View Clusters",
+      #             status = "info",
+      #             solidHeader = TRUE,
+      #             width = 12,
+      #             style = "cursor: pointer; text-align: center; font-size: 18px; border-radius: 15px; border: 1px solid #007bff; padding: 20px; transition: all 0.3s ease-in-out; color: white;",
+      #             tags$a(
+      #               href = "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494",
+      #               target = "_blank",
+      #               "📊 Access Clusters on Google Sheets",
+      #               style = "color: #ffffff; text-decoration: none; display: inline-block; padding: 15px 30px; background-color: #007bff; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease;"
+      #             ),
+      #             tags$p(
+      #               "Click the link above to explore the clustering results in more detail, including which initiatives belong to each cluster.",
+      #               style = "margin-top: 15px; font-size: 16px; line-height: 1.6; color: #0a0303; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);"
+      #             )
+      #           )
+      #         )
+      # ),
+      # 
+      
       tabItem(tabName = "mca",
               fluidRow(
-                # MCA Plot: NonProfit
-                box(
-                  title = "Multiple Correspondence Analysis (MCA): NonProfit",
-                  status = "primary",
-                  solidHeader = TRUE,
-                  width = 12,
-                  uiOutput("mca_plot_ui"),
-                  tags$p(
-                    "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives."
-                  )
+                # MCA NonProfit + Interpretation
+                column(width = 7.5,
+                       box(
+                         title = "Multiple Correspondence Analysis (MCA): NonProfit",
+                         status = "primary",
+                         solidHeader = TRUE,
+                         width = 12,
+                         uiOutput("mca_plot_ui"),
+                         tags$p(
+                           "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives."
+                         )
+                       )
                 ),
-                
-                # MCA Plot: Category
-                box(
-                  title = "Multiple Correspondence Analysis (MCA): Category",
-                  status = "primary",
-                  solidHeader = TRUE,
-                  width = 12,
-                  uiOutput("mca_plot_ui2"),
-                  tags$p(
-                    "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
-                  )
+                column(width = 4.5,
+                       box(
+                         title = "How to Interpret the MCA Plot (NonProfit)",
+                         status = "info",
+                         solidHeader = TRUE,
+                         width = 12,
+                         tags$div(
+                           style = "font-size: 15px; line-height: 1.6;",
+                           tags$p("This plot displays the results of a Multiple Correspondence Analysis (MCA) performed on categorical variables describing open science initiatives. Each point in the plot represents a single initiative."),
+                           tags$ul(
+                             tags$li(tags$b("What is plotted:"), "Initiatives are projected into a reduced two-dimensional space derived from categorical variables such as their nonprofit status, governance model, and category."),
+                             tags$li(tags$b("Color coding:"), "Points are colored by profit status: red for for-profit initiatives and blue for nonprofit ones. This makes it easy to visually assess how these types of organizations distribute across the MCA space."),
+                             tags$li(tags$b("Axes (Dimensions):"), "The horizontal and vertical axes correspond to the first two dimensions of the MCA, which summarize the most significant patterns in the data."),
+                             tags$li(tags$b("Spatial interpretation:"), "Initiatives that are closer together on the plot tend to share similar characteristics. For example, a cluster of nonprofit initiatives might share governance structures or operational models."),
+                             tags$li(tags$b("Purpose:"), "This plot helps to uncover latent profiles in the ecosystem of open science initiatives, showing how nonprofit and for-profit entities differentiate across multiple categorical dimensions.")
+                           ),
+                         )
+                       )
+                )
+              ),
+              
+              fluidRow(
+                # MCA Category + Interpretation
+                column(width = 7.5,
+                       box(
+                           title = "Multiple Correspondence Analysis (MCA): Category",
+                           status = "primary",
+                           solidHeader = TRUE,
+                           width = 12,
+                           uiOutput("mca_plot_ui2"),
+                           tags$p(
+                           "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
+                           )
+                         )
                 ),
-                
-                # Hierarchical Clustering Dendrogram
-                box(
-                  title = "Hierarchical Clustering Dendrogram",
-                  status = "danger",
-                  solidHeader = TRUE,
-                  width = 12,
-                  plotlyOutput("dendrogram"),
-                  tags$p(
-                    "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
-                  )
+                column(width = 4.5,
+                       box(
+                         title = "How to Interpret the MCA Plot (Category)",
+                         status = "info",
+                         solidHeader = TRUE,
+                         width = 12,
+                         tags$div(
+                           style = "font-size: 15px; line-height: 1.6;",
+                           tags$p("This plot shows the same MCA projection, but colored by the main category of each initiative (e.g., publishing platform, repository, infrastructure)."),
+                           tags$ul(
+                             tags$li(tags$b("What is plotted:"), "Each point is an open science initiative, projected based on their categorical characteristics."),
+                             tags$li(tags$b("Color coding:"), "Initiatives are colored according to their assigned category, allowing for visual comparison between types of services or platforms."),
+                             tags$li(tags$b("Interpretation:"), "Initiatives from the same category may appear grouped together if they share common traits. Conversely, scattered colors within a region may indicate overlapping features between categories."),
+                             tags$li(tags$b("Axes:"), "As in the previous plot, the axes represent the two main MCA dimensions, providing a simplified structure of multivariate associations."),
+                             tags$li(tags$b("Goal:"), "This visualization supports the identification of functional or organizational similarities between initiatives, beyond their declared category.")
+                           ),
+                           tags$p("This view highlights the internal diversity or homogeneity within categories, and helps detect hybrid initiatives that span multiple functions.")
+                         )
+                       )
+                )
+              ),
+              
+              fluidRow(
+                # Dendrogram + Interpretation
+                column(width = 7.5,
+                       box(
+                         title = "Hierarchical Clustering Dendrogram",
+                         status = "danger",
+                         solidHeader = TRUE,
+                         width = 12,
+                         plotlyOutput("dendrogram"),
+                         tags$p(
+                           "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
+                         )
+                       )
+                ),
+                column(width = 4.5,
+                       box(
+                         title = "How to Interpret the Clustering Dendrogram",
+                         status = "info",
+                         solidHeader = TRUE,
+                         width = 12,
+                         tags$div(
+                           style = "font-size: 15px; line-height: 1.6;",
+                           tags$p("The dendrogram visualizes the result of a hierarchical clustering performed on the coordinates obtained from the MCA. It helps group similar initiatives based on the MCA's multi-dimensional representation."),
+                           tags$ul(
+                             tags$li(tags$b("What is clustered:"), "The clustering uses the MCA coordinates of each initiative, capturing the variation across all selected categorical variables."),
+                             tags$li(tags$b("Height of branches:"), "The vertical position where two branches merge represents the dissimilarity between the groups. The lower the merge, the more similar the initiatives."),
+                             tags$li(tags$b("Cutting the tree:"), "By cutting the dendrogram at a specific height, we can define distinct clusters (groups) of initiatives."),
+                             tags$li(tags$b("Interpretation of clusters:"), "Each cluster brings together initiatives with similar profiles—often combinations of being nonprofit, community-based, and operating within a given category.")
+                           ),
+                           tags$p("The clustering was performed using Euclidean distances on MCA coordinates, followed by a hierarchical method (Ward's linkage). This method helps define meaningful typologies of open science initiatives.")
+                         )
+                       )
                 )
               ),
               
