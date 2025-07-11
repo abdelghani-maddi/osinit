@@ -401,68 +401,6 @@ ui <- dashboardPage(
       # --------------------------------------------
       # MCA & Clustering Tab
       # --------------------------------------------
-      # tabItem(tabName = "mca",
-      #         fluidRow(
-      #           # MCA Plot: NonProfit
-      #           box(
-      #             title = "Multiple Correspondence Analysis (MCA): NonProfit",
-      #             status = "primary",
-      #             solidHeader = TRUE,
-      #             width = 12,
-      #             uiOutput("mca_plot_ui"),
-      #             tags$p(
-      #               "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives."
-      #             )
-      #           ),
-      #           
-      #           # MCA Plot: Category
-      #           box(
-      #             title = "Multiple Correspondence Analysis (MCA): Category",
-      #             status = "primary",
-      #             solidHeader = TRUE,
-      #             width = 12,
-      #             uiOutput("mca_plot_ui2"),
-      #             tags$p(
-      #               "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
-      #             )
-      #           ),
-      #           
-      #           # Hierarchical Clustering Dendrogram
-      #           box(
-      #             title = "Hierarchical Clustering Dendrogram",
-      #             status = "danger",
-      #             solidHeader = TRUE,
-      #             width = 12,
-      #             plotlyOutput("dendrogram"),
-      #             tags$p(
-      #               "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
-      #             )
-      #           )
-      #         ),
-      #         
-      #         # External Link to Cluster Table
-      #         fluidRow(
-      #           box(
-      #             title = "View Clusters",
-      #             status = "info",
-      #             solidHeader = TRUE,
-      #             width = 12,
-      #             style = "cursor: pointer; text-align: center; font-size: 18px; border-radius: 15px; border: 1px solid #007bff; padding: 20px; transition: all 0.3s ease-in-out; color: white;",
-      #             tags$a(
-      #               href = "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494",
-      #               target = "_blank",
-      #               "📊 Access Clusters on Google Sheets",
-      #               style = "color: #ffffff; text-decoration: none; display: inline-block; padding: 15px 30px; background-color: #007bff; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease;"
-      #             ),
-      #             tags$p(
-      #               "Click the link above to explore the clustering results in more detail, including which initiatives belong to each cluster.",
-      #               style = "margin-top: 15px; font-size: 16px; line-height: 1.6; color: #0a0303; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);"
-      #             )
-      #           )
-      #         )
-      # ),
-      # 
-      
       tabItem(tabName = "mca",
               fluidRow(
                 # MCA NonProfit + Interpretation
