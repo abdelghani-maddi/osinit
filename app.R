@@ -172,6 +172,7 @@ ui <- dashboardPage(
       # Navigation menu items
       menuItem("Global Overview", tabName = "overview", icon = icon("globe")),
       menuItem("MCA & Clustering", tabName = "mca", icon = icon("chart-bar")),
+      menuItem("Monitoring Principles", tabName = "principles", icon = icon("balance-scale")),
       menuItem("Monitoring Landscape", tabName = "monitoring", icon = icon("table")),
       menuItem("About", tabName = "about", icon = icon("info-circle")),
       menuItem("FAQs", tabName = "FAQs", icon = icon("lightbulb")),
@@ -246,6 +247,10 @@ ui <- dashboardPage(
           background-color: #8aa728 !important;  /* Pink for Global Overview */
           color: white !important;
         }
+        .sidebar-menu li:nth-child(8) a:hover {
+          background-color: #288aa7 !important;  /* Blue for Logo */
+          color: white !important;
+        }
       ")),
     
       tags$style(HTML("
@@ -293,6 +298,15 @@ ui <- dashboardPage(
       
     ),
     
+    tags$style(HTML("
+  .badge {
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    color: white;
+    margin-right: 5px;
+  }
+  ")),
     tabItems(
       
       # --------------------------------------------
@@ -397,6 +411,158 @@ ui <- dashboardPage(
                 )
               )
       ),
+      
+      # --------------------------------------------
+      # Monitoring principles Tab
+      # --------------------------------------------
+      
+      tabItem(tabName = "principles",
+              tags$head(
+                tags$style(HTML("
+      .principle-section {
+        padding: 40px 30px;
+        background-color: #f8f9fc;
+      }
+
+      .principle-title-main {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #2c3e50;
+        text-align: center;
+      }
+
+      .principle-subtitle {
+        font-size: 16px;
+        color: #7f8c8d;
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .principle-card {
+        background-color: #fff;
+        border-radius: 18px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+        padding: 25px;
+        margin-bottom: 30px;
+        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .principle-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.10);
+      }
+
+      .principle-icon-badge {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        font-size: 22px;
+        color: #fff;
+      }
+
+      .principle-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #2c3e50;
+      }
+
+      .principle-text {
+        font-size: 15px;
+        color: #555;
+        line-height: 1.6;
+      }
+
+      .light-blue { background-color: #60a5fa; }
+      .light-green { background-color: #34d399; }
+      .light-orange { background-color: #fbbf24; }
+      .light-purple { background-color: #c084fc; }
+      .light-pink { background-color: #f472b6; }
+
+      .osmi-logo-small {
+        height: 36px;
+        float: right;
+        margin-top: -10px;
+        opacity: 0.85;
+      }
+    "))
+              ),
+              
+              fluidRow(
+                column(12,
+                       div(class = "principle-section",
+                           div(
+                             style = "display: flex; justify-content: space-between; align-items: center;",
+                             div(
+                               div(class = "principle-title-main", "OSMI Monitoring Principles"),
+                               div(class = "principle-subtitle", "Foundational values for evaluating Open Science policies effectively and ethically.")
+                             ),
+                             tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
+                           ),
+                           
+                           br(),
+                           
+                           fluidRow(
+                             column(width = 6,
+                                    div(class = "principle-card",
+                                        div(class = "principle-icon-badge light-blue", icon("eye")),
+                                        div(class = "principle-title", "Transparency"),
+                                        div(class = "principle-text",
+                                            "Ensure that data, methods, and decision-making processes are open, traceable, and reproducible across all stages of scientific activity."
+                                        )
+                                    )
+                             ),
+                             column(width = 6,
+                                    div(class = "principle-card",
+                                        div(class = "principle-icon-badge light-green", icon("users")),
+                                        div(class = "principle-title", "Inclusivity"),
+                                        div(class = "principle-text",
+                                            "Promote the involvement of all stakeholders – including marginalized groups – in the design, implementation, and evaluation of open science practices."
+                                        )
+                                    )
+                             ),
+                             column(width = 6,
+                                    div(class = "principle-card",
+                                        div(class = "principle-icon-badge light-orange", icon("sync-alt")),
+                                        div(class = "principle-title", "Flexibility"),
+                                        div(class = "principle-text",
+                                            "Allow for adaptations in monitoring frameworks to reflect local, national, or disciplinary particularities while maintaining overall coherence."
+                                        )
+                                    )
+                             ),
+                             column(width = 6,
+                                    div(class = "principle-card",
+                                        div(class = "principle-icon-badge light-purple", icon("leaf")),
+                                        div(class = "principle-title", "Sustainability"),
+                                        div(class = "principle-text",
+                                            "Ensure that monitoring systems are robust, regularly updated, and supported by long-term infrastructure and policy commitments."
+                                        )
+                                    )
+                             ),
+                             column(width = 12,
+                                    div(class = "principle-card",
+                                        div(class = "principle-icon-badge light-pink", icon("handshake")),
+                                        div(class = "principle-title", "Responsibility"),
+                                        div(class = "principle-text",
+                                            "Respect ethical standards, privacy, and data protection principles when collecting, sharing or interpreting open science metrics."
+                                        )
+                                    )
+                             )
+                           )
+                       )
+                )
+              )
+      )
+      
+      
+      ,
+      
       
       # --------------------------------------------
       # MCA & Clustering Tab
