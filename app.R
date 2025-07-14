@@ -419,78 +419,92 @@ ui <- dashboardPage(
       tabItem(tabName = "principles",
               tags$head(
                 tags$style(HTML("
-       .principle-section {
-  padding: 40px 30px;
-  background-color: #f8f9fc;
-  background-image: url('soft-gradient.jpg');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
-  background-attachment: scroll;
-  opacity: 1;
-}
-
+      .principle-section {
+        padding: 50px 40px;
+        background-color: #f9fafb;
+        background-image: url('soft-gradient.jpg');
+        background-size: cover;
+        background-position: center;
+      }
 
       .principle-title-main {
-        font-size: 32px;
-        font-weight: 700;
-        margin-bottom: 10px;
-        color: #2c3e50;
+        font-size: 38px;
+        font-weight: 800;
         text-align: center;
+        color: #1f2937;
+        margin-bottom: 10px;
       }
 
       .principle-subtitle {
-        font-size: 16px;
-        color: #7f8c8d;
+        font-size: 17px;
         text-align: center;
+        color: #6b7280;
         margin-bottom: 40px;
       }
 
-      .principle-card {
-        background-color: #fff;
+      details.accordion-card {
+        background-color: #ffffffdd;
         border-radius: 18px;
-        box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-        padding: 25px;
+        box-shadow: 0 20px 30px rgba(0,0,0,0.06);
         margin-bottom: 30px;
-        height: 100%;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        border-left: 6px solid #3b82f6;
+        transition: all 0.3s ease;
       }
 
-      .principle-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.10);
+      details[open].accordion-card {
+        box-shadow: 0 28px 40px rgba(0,0,0,0.08);
       }
 
-      .principle-icon-badge {
-        width: 50px;
-        height: 50px;
+      summary.accordion-header {
+        padding: 22px 30px;
+        font-size: 20px;
+        font-weight: 700;
+        background: linear-gradient(to right, #3b82f6, #60a5fa);
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+
+      summary.accordion-header:hover {
+        background: linear-gradient(to right, #2563eb, #60a5fa);
+      }
+
+      .accordion-content {
+        padding: 25px 35px;
+        background-color: #ffffff;
+        animation: fadeIn 0.4s ease-in-out;
+      }
+
+      .accordion-content ul {
+        padding-left: 20px;
+      }
+
+      .accordion-content li {
+        margin-bottom: 12px;
+        font-size: 16px;
+        line-height: 1.7;
+        color: #374151;
+      }
+
+      .badge-circle {
+        width: 42px;
+        height: 42px;
+        background-color: rgba(255,255,255,0.2);
         border-radius: 50%;
-        display: inline-flex;
+        display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 15px;
-        font-size: 22px;
-        color: #fff;
+        font-size: 18px;
       }
 
-      .principle-title {
-        font-size: 20px;
-        font-weight: bold;
-        margin-bottom: 10px;
-        color: #2c3e50;
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
-
-      .principle-text {
-        font-size: 15px;
-        color: #555;
-        line-height: 1.6;
-      }
-
-      .light-blue { background-color: #60a5fa; }
-      .light-purple { background-color: #c084fc; }
-      .light-orange { background-color: #fbbf24; }
-      .light-green { background-color: #34d399; }
-      .light-pink { background-color: #f472b6; }
 
       .osmi-logo-small {
         height: 36px;
@@ -498,131 +512,122 @@ ui <- dashboardPage(
         margin-top: -10px;
         opacity: 0.85;
       }
+
+      .source-box {
+        text-align: center;
+        margin-top: 40px;
+      }
+
+      .source-box a {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 8px 20px;
+        background-color: #004c97;
+        color: white;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 15px;
+        transition: background-color 0.3s ease;
+      }
+
+      .source-box a:hover {
+        background-color: #00386f;
+      }
     "))
               ),
               
               fluidRow(
                 column(12,
                        div(class = "principle-section",
+                           
+                           # Header
                            div(
-                             style = "background-color: rgba(255, 255, 255, 0.85); width: 100%; padding: 20px 30px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
-                             
-                             # Titre et sous-titre
+                             style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
                              div(
                                style = "flex: 1; min-width: 250px;",
-                               div(class = "principle-title-main", "OSMI Monitoring Principles*"),
-                               div(class = "principle-subtitle", "Foundational values for evaluating Open Science policies effectively and ethically.")
+                               div(class = "principle-title-main", "Principles of Open Science Monitoring"),
+                               div(class = "principle-subtitle", "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
                              ),
-                             
-                             # Logo à droite
-                             tags$img(src = "logo-osmi.png", class = "osmi-logo-small", 
-                                      style = "height: 45px; opacity: 0.7; margin-left: 20px;")
-                           )
-                           ,
+                             tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
+                           ),
                            
                            br(),
                            
-                           fluidRow(
-                             column(width = 6,
-                                    div(class = "principle-card",
-                                        div(class = "principle-icon-badge light-blue", icon("eye")),
-                                        div(class = "principle-title", "Transparency"),
-                                        div(class = "principle-text",
-                                            "Ensure that data, methods, and decision-making processes are open, traceable, and reproducible across all stages of scientific activity."
-                                        )
-                                    )
-                             ),
-                             column(width = 6,
-                                    div(class = "principle-card",
-                                        div(class = "principle-icon-badge light-purple", icon("users")),
-                                        div(class = "principle-title", "Inclusivity"),
-                                        div(class = "principle-text",
-                                            "Promote the involvement of all stakeholders – including marginalized groups – in the design, implementation, and evaluation of open science practices."
-                                        )
-                                    )
-                             ),
-                             column(width = 6,
-                                    div(class = "principle-card",
-                                        div(class = "principle-icon-badge light-orange", icon("sync-alt")),
-                                        div(class = "principle-title", "Flexibility"),
-                                        div(class = "principle-text",
-                                            "Allow for adaptations in monitoring frameworks to reflect local, national, or disciplinary particularities while maintaining overall coherence."
-                                        )
-                                    )
-                             ),
-                             column(width = 6,
-                                    div(class = "principle-card",
-                                        div(class = "principle-icon-badge light-green", icon("leaf")),
-                                        div(class = "principle-title", "Sustainability"),
-                                        div(class = "principle-text",
-                                            "Ensure that monitoring systems are robust, regularly updated, and supported by long-term infrastructure and policy commitments."
-                                        )
-                                    )
-                             ),
-                             column(width = 12,
-                                    div(class = "principle-card",
-                                        div(class = "principle-icon-badge light-pink", icon("handshake")),
-                                        div(class = "principle-title", "Responsibility"),
-                                        div(class = "principle-text",
-                                            "Respect ethical standards, privacy, and data protection principles when collecting, sharing or interpreting open science metrics."
-                                        )
-                                    )
-                             ),
-                             
-                             # Référence en bas de page
-                             tags$div(
-                               style = "
-    display: flex;
-    justify-content: center;
-    margin-top: 30px;
-    padding: 15px;
-    background-color: transparent;
-    clear: both;
-  ",
-                               tags$div(
-                                 style = "
-      max-width: 1500px;
-      width: 100%;
-      padding: 15px 20px;
-      background-color: rgba(255, 255, 255, 0.9);
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      font-size: 13px;
-      color: #444;
-      text-align: center;
-    ",
-                                 tags$p(style = "margin: 0 0 6px 0;",
-                                        tags$em("* Bobrov, E., Bracco, L., Dacos, M., Fressengeas, N., Hrynaszkiewicz, I., Iarkaeva, A., Peršić, A., Proudman, V., Romary, L., & Sabo, R. (2025). "),
-                                        tags$strong("The Principles of Open Science Monitoring."),
-                                        " Open Science Monitoring Initiative."
-                                 ),
-                                 tags$a(
-                                   href = "https://doi.org/10.5281/zenodo.15807481",
-                                   target = "_blank",
-                                   style = "
-        display: inline-block;
-        margin-top: 8px;
-        padding: 6px 14px;
-        background-color: #004c97;
-        color: white;
-        border-radius: 20px;
-        text-decoration: none;
-        font-weight: bold;
-        font-size: 15px;
-        transition: background-color 0.3s ease;
-      ",
-                                   "Find out more"
-                                 )
-                               )
-                             )
-                             
-                             
-                             
-                         )
+                           # Accordion Block 1
+                           tags$details(class = "accordion-card",
+                                        style = "border-left: 6px solid #3b82f6;",
+                                        tags$summary(class = "accordion-header",
+                                                     style = "background: linear-gradient(to right, #3b82f6, #60a5fa);",
+                                                     span(class = "badge-circle", icon("lightbulb")),
+                                                     "Part 1: Relevance and Significance"
+                                        ),
+                                        div(class = "accordion-content", HTML("
+            <ul>
+              <li><strong>Applicable and clear in scope:</strong> Indicators must be explicitly defined, relevant and scoped appropriately.</li>
+              <li><strong>Meaningful for planning and policy:</strong> Indicators should support policy-making across contexts.</li>
+              <li><strong>Co-created:</strong> Developed inclusively with researchers and communities.</li>
+              <li><strong>Inclusive:</strong> Reflect diversity of contexts, languages, gender, knowledge systems.</li>
+              <li><strong>Modular:</strong> Allow flexible composition of indicators for local/global alignment.</li>
+              <li><strong>Reliable:</strong> Explicit about scientific consensus and development stage.</li>
+              <li><strong>Consistent:</strong> Enable long-term, cross-institutional comparability.</li>
+            </ul>
+          "))
+                           ),
+                           
+                           # Accordion Block 2
+                           tags$details(class = "accordion-card",
+                                        style = "border-left: 6px solid #d4af37;",
+                                        tags$summary(class = "accordion-header",
+                                                     style = "background: linear-gradient(to right, #facc15, #fde68a);",
+                                                     span(class = "badge-circle", icon("eye")),
+                                                     "Part 2: Transparency and Reproducibility"
+                                        ),
+                                        div(class = "accordion-content", HTML("
+            <ul>
+              <li><strong>Openness:</strong> Use open infrastructures, tools, and licenses.</li>
+              <li><strong>Quality of sources:</strong> Data must be timely, complete, and accurate.</li>
+              <li><strong>Documentation:</strong> Clearly describe data sources, provenance, and methods.</li>
+              <li><strong>Reproducibility and reusability:</strong> Version indicators and enable reuse.</li>
+              <li><strong>Metadata:</strong> Include rich, standardized metadata with PIDs.</li>
+              <li><strong>Community principles:</strong> Align with FAIR, CARE, TRUST frameworks.</li>
+              <li><strong>Contextual communication:</strong> Prevent misinterpretation; explain clearly.</li>
+              <li><strong>Conflict of interest:</strong> Declare transparently when relevant.</li>
+            </ul>
+          "))
+                           ),
+                           
+                           # Accordion Block 3
+                           tags$details(class = "accordion-card",
+                                        style = "border-left: 6px solid #8b5cf6;",
+                                        tags$summary(class = "accordion-header",
+                                                     style = "background: linear-gradient(to right, #8b5cf6, #c4b5fd);",
+                                                     span(class = "badge-circle", icon("balance-scale")),
+                                                     "Part 3: Self-Assessment and Responsible Use"
+                                        ),
+                                        div(class = "accordion-content", HTML("
+            <ul>
+              <li><strong>Self-evaluation:</strong> Regularly assess and disclose alignment with these principles.</li>
+              <li><strong>Revision:</strong> Continuously improve and adapt indicators over time.</li>
+              <li><strong>Environmental responsibility:</strong> Reduce monitoring system impact.</li>
+              <li><strong>Long-term sustainability:</strong> Plan for funding, access and infrastructure.</li>
+              <li><strong>Constructive comparison:</strong> Avoid rankings, encourage fair benchmarking.</li>
+            </ul>
+          "))
+                           ),
+                           
+                           # Footer
+                           div(class = "source-box",
+                               tags$em("Source: Open Science Monitoring Initiative, 2025"),
+                               tags$br(),
+                               tags$a(href = "https://doi.org/10.5281/zenodo.15807481", target = "_blank", "Access full document")
+                           )
                        )
                 )
               )
       )
+      
+      
       
       
       ,
