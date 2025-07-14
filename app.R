@@ -419,10 +419,17 @@ ui <- dashboardPage(
       tabItem(tabName = "principles",
               tags$head(
                 tags$style(HTML("
-      .principle-section {
-        padding: 40px 30px;
-        background-color: #f8f9fc;
-      }
+       .principle-section {
+  padding: 40px 30px;
+  background-color: #f8f9fc;
+  background-image: url('soft-gradient.jpg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-attachment: scroll;
+  opacity: 1;
+}
+
 
       .principle-title-main {
         font-size: 32px;
@@ -480,9 +487,9 @@ ui <- dashboardPage(
       }
 
       .light-blue { background-color: #60a5fa; }
-      .light-green { background-color: #34d399; }
-      .light-orange { background-color: #fbbf24; }
       .light-purple { background-color: #c084fc; }
+      .light-orange { background-color: #fbbf24; }
+      .light-green { background-color: #34d399; }
       .light-pink { background-color: #f472b6; }
 
       .osmi-logo-small {
@@ -498,13 +505,20 @@ ui <- dashboardPage(
                 column(12,
                        div(class = "principle-section",
                            div(
-                             style = "display: flex; justify-content: space-between; align-items: center;",
+                             style = "background-color: rgba(255, 255, 255, 0.85); width: 100%; padding: 20px 30px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
+                             
+                             # Titre et sous-titre
                              div(
-                               div(class = "principle-title-main", "OSMI Monitoring Principles"),
+                               style = "flex: 1; min-width: 250px;",
+                               div(class = "principle-title-main", "OSMI Monitoring Principles*"),
                                div(class = "principle-subtitle", "Foundational values for evaluating Open Science policies effectively and ethically.")
                              ),
-                             tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
-                           ),
+                             
+                             # Logo à droite
+                             tags$img(src = "logo-osmi.png", class = "osmi-logo-small", 
+                                      style = "height: 45px; opacity: 0.7; margin-left: 20px;")
+                           )
+                           ,
                            
                            br(),
                            
@@ -520,7 +534,7 @@ ui <- dashboardPage(
                              ),
                              column(width = 6,
                                     div(class = "principle-card",
-                                        div(class = "principle-icon-badge light-green", icon("users")),
+                                        div(class = "principle-icon-badge light-purple", icon("users")),
                                         div(class = "principle-title", "Inclusivity"),
                                         div(class = "principle-text",
                                             "Promote the involvement of all stakeholders – including marginalized groups – in the design, implementation, and evaluation of open science practices."
@@ -538,7 +552,7 @@ ui <- dashboardPage(
                              ),
                              column(width = 6,
                                     div(class = "principle-card",
-                                        div(class = "principle-icon-badge light-purple", icon("leaf")),
+                                        div(class = "principle-icon-badge light-green", icon("leaf")),
                                         div(class = "principle-title", "Sustainability"),
                                         div(class = "principle-text",
                                             "Ensure that monitoring systems are robust, regularly updated, and supported by long-term infrastructure and policy commitments."
@@ -553,8 +567,58 @@ ui <- dashboardPage(
                                             "Respect ethical standards, privacy, and data protection principles when collecting, sharing or interpreting open science metrics."
                                         )
                                     )
+                             ),
+                             
+                             # Référence en bas de page
+                             tags$div(
+                               style = "
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+    padding: 15px;
+    background-color: transparent;
+    clear: both;
+  ",
+                               tags$div(
+                                 style = "
+      max-width: 1500px;
+      width: 100%;
+      padding: 15px 20px;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      font-size: 13px;
+      color: #444;
+      text-align: center;
+    ",
+                                 tags$p(style = "margin: 0 0 6px 0;",
+                                        tags$em("* Bobrov, E., Bracco, L., Dacos, M., Fressengeas, N., Hrynaszkiewicz, I., Iarkaeva, A., Peršić, A., Proudman, V., Romary, L., & Sabo, R. (2025). "),
+                                        tags$strong("The Principles of Open Science Monitoring."),
+                                        " Open Science Monitoring Initiative."
+                                 ),
+                                 tags$a(
+                                   href = "https://doi.org/10.5281/zenodo.15807481",
+                                   target = "_blank",
+                                   style = "
+        display: inline-block;
+        margin-top: 8px;
+        padding: 6px 14px;
+        background-color: #004c97;
+        color: white;
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 15px;
+        transition: background-color 0.3s ease;
+      ",
+                                   "Find out more"
+                                 )
+                               )
                              )
-                           )
+                             
+                             
+                             
+                         )
                        )
                 )
               )
