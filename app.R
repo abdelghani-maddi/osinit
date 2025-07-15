@@ -422,7 +422,7 @@ ui <- dashboardPage(
       .principle-section {
         padding: 50px 40px;
         background-color: #f9fafb;
-        background-image: url('soft-gradient.jpg');
+        background-image: linear-gradient(to bottom right, #f0f4f8, #d9e2ec);
         background-size: cover;
         background-position: center;
       }
