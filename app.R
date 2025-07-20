@@ -24,6 +24,7 @@ library(leaflet)  # For interactive maps
 library(htmltools)  # For HTML tools in Shiny
 library(explor)
 library(htmlwidgets)
+library(ggdendro)
 
 
 #######################
@@ -162,7 +163,7 @@ ui <- dashboardPage(
   
   # Header Section: Title and width setup
   dashboardHeader(
-    title = tags$strong("Open Science Initiatives"),  # Dashboard Title
+    title = tags$strong("Open Science Initiatives Tracker"),  # Dashboard Title
     titleWidth = 450                                  # Custom title width
   ),
   
@@ -716,7 +717,7 @@ ui <- dashboardPage(
                          status = "danger",
                          solidHeader = TRUE,
                          width = 12,
-                         plotlyOutput("dendrogram"),
+                         plotlyOutput("dendrogram", height = "2000px"),
                          tags$p(
                            "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
                          )
@@ -1087,21 +1088,163 @@ server <- function(input, output, session) {
   })
   
   # Render the dendrogram for hierarchical clustering
+  # output$dendrogram <- renderPlotly({
+  #   data <- data_reactive()
+  # 
+  #   p1 <- factoextra::fviz_dend(
+  #     arbre_phi2,
+  #     k = 4,
+  #     rect = TRUE,
+  #     horiz = TRUE,
+  #     show_labels = TRUE,
+  #     label.track = "none",
+  #     label.nudge_y = 15  # décalage des étiquettes vers la droite
+  #   ) +
+  #     ggtitle("Dendrogram (cut into 4 clusters)") +
+  #     theme_minimal() +
+  #     theme(
+  #       axis.text.y = element_text(
+  #         size = 1,
+  #         hjust = 1
+  #       ),
+  #       axis.ticks.y = element_blank(),
+  #       plot.margin = margin(t = 1, r = 1, b = 1, l = 7)
+  #     )
+  # 
+  #   ggplotly(p1)
+  # })
+  
+  
+  # output$dendrogram <- renderPlotly({
+  #   # Définir le nombre de clusters
+  #   k <- 6
+  #   # Convertir en dendrogramme et colorer les branches (utile si jamais utile plus tard)
+  #   dend <- as.dendrogram(arbre_phi2)
+  #   
+  #   # On utilise cutree pour identifier les clusters
+  #   clusters <- cutree(arbre_phi2, k = k)
+  #   
+  #   # Extraire les données du dendrogramme
+  #   dend_data <- dendro_data(dend, type = "rectangle")
+  #   segs <- dend_data$segments
+  #   labels <- dend_data$labels
+  #   
+  #   # Associer cluster à chaque label
+  #   label_df <- data.frame(label = names(clusters), cluster = clusters)
+  #   labels <- merge(labels, label_df, by = "label", all.x = TRUE)
+  #   
+  #   # Inverser les axes pour affichage horizontal
+  #   max_x <- max(segs$yend, na.rm = TRUE)
+  #   segs_horiz <- data.frame(
+  #     x = max_x - segs$y,
+  #     xend = max_x - segs$yend,
+  #     y = segs$x,
+  #     yend = segs$xend
+  #   )
+  #   
+  #   # Récupérer la couleur des branches à droite (liées aux labels)
+  #   labels$x_horiz <- max_x - labels$y
+  #   labels$y_horiz <- labels$x
+  #   labels$cluster <- as.factor(labels$cluster)
+  #   
+  #   # Position des étiquettes
+  #   label_offset <- max(segs_horiz$xend, na.rm = TRUE) + 0.1
+  #   
+  #   # Création du plot
+  #   plot_ly(type = "scatter", mode = "lines") %>%
+  #     # Branches noires
+  #     add_segments(
+  #       data = segs_horiz,
+  #       x = ~x, xend = ~xend,
+  #       y = ~y, yend = ~yend,
+  #       line = list(color = "grey"),
+  #       showlegend = FALSE
+  #     ) %>%
+  #     # Étiquettes colorées selon le cluster
+  #     add_text(
+  #       data = labels,
+  #       x = label_offset,
+  #       y = ~y_horiz,
+  #       text = ~label,
+  #       textfont = list(size = 13),
+  #       textposition = "right",
+  #       color = ~cluster,
+  #       colors = "Set1",
+  #       showlegend = FALSE
+  #     ) %>%
+  #     layout(
+  #       title = "Dendrogram (colored by cluster)",
+  #       xaxis = list(title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  #       yaxis = list(title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  #       margin = list(l = 20, r = 200, t = 50, b = 20)
+  #     )
+  # })
+  
   output$dendrogram <- renderPlotly({
-    data <- data_reactive()
+
+    # Nombre de clusters
+    k <- 6
     
-    p1 <- factoextra::fviz_dend(
-      arbre_phi2,
-      show_labels = TRUE,
-      k = 4,
-      rect = TRUE
-    ) +
-      ggplot2::ggtitle("Dendrogram (cut into 4 clusters)") +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    # Conversion en dendrogramme
+    dend <- as.dendrogram(arbre_phi2)
     
-    ggplotly(p1)
+    # Calcul des clusters
+    clusters <- cutree(arbre_phi2, k = k)
+    
+    # Extraction des données pour dendrogramme
+    dend_data <- dendro_data(dend, type = "rectangle")
+    segs <- dend_data$segments
+    labels <- dend_data$labels
+    
+    # Assigner les clusters aux labels via match (pas de merge)
+    labels$cluster <- clusters[match(labels$label, names(clusters))]
+    labels$cluster <- as.factor(labels$cluster)
+    
+    # Inverser axes pour affichage horizontal
+    max_x <- max(segs$yend, na.rm = TRUE)
+    segs_horiz <- data.frame(
+      x = max_x - segs$y,
+      xend = max_x - segs$yend,
+      y = segs$x,
+      yend = segs$xend
+    )
+    
+    labels$x_horiz <- max_x - labels$y
+    labels$y_horiz <- labels$x
+    
+    # Position étiquettes (un peu à droite de la branche la plus à droite)
+    label_offset <- max(segs_horiz$xend, na.rm = TRUE) + 0.1
+    
+    # Création plot
+    plot_ly(type = "scatter", mode = "lines") %>%
+      add_segments(
+        data = segs_horiz,
+        x = ~x, xend = ~xend,
+        y = ~y, yend = ~yend,
+        line = list(color = "grey"),
+        showlegend = FALSE
+      ) %>%
+      add_text(
+        data = labels,
+        x = label_offset,
+        y = ~y_horiz,
+        text = ~label,
+        textfont = list(size = 13),
+        textposition = "right",
+        color = ~cluster,
+        colors = "Set1",
+        showlegend = FALSE
+      ) %>%
+      layout(
+        title = "Dendrogram (colored by cluster)",
+        xaxis = list(title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE),
+        yaxis = list(title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE),
+        margin = list(l = 20, r = 200, t = 50, b = 20)
+      )
   })
+  
+  
+  
   
   # Observe new data, compute clusters and sync to Google Sheets
   observeEvent(data_reactive(), {
@@ -1222,7 +1365,6 @@ server <- function(input, output, session) {
 
 # Launch the application
 shinyApp(ui = ui, server = server)
-
 
 # To deploy the app online 
 # rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
