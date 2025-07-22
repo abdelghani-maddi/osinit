@@ -1180,9 +1180,9 @@ server <- function(input, output, session) {
       layout(
         title = "Dendrogramme interactif avec branches colorées",
         xaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE,
-                     range = c(0, label_offset + 2)),
+                     range = c(0, label_offset + 5)),
         yaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE),
-        margin = list(l = 20, r = 300, t = 50, b = 20)
+        margin = list(l = 20, r = 50, t = 50, b = 20)
       )
     
   })
