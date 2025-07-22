@@ -25,6 +25,8 @@ library(htmltools)  # For HTML tools in Shiny
 library(explor)
 library(htmlwidgets)
 library(ggdendro)
+library(dendextend)
+
 
 
 #######################
@@ -132,7 +134,7 @@ arbre_phi2 <- perform_clustering(acm)
 #######################
 # Assign Clusters Based on Hierarchical Clustering
 #######################
-data$cluster <- cutree(arbre_phi2, 4)  # Cut the dendrogram into 5 clusters
+data$cluster <- cutree(arbre_phi2, 6)  # Cut the dendrogram into 5 clusters
 
 
 #######################
@@ -1089,47 +1091,79 @@ server <- function(input, output, session) {
   
   # Render the dendrogram for hierarchical clustering
   output$dendrogram <- renderPlotly({
-
+    
     # Nombre de clusters
     k <- 6
-
-    # Conversion en dendrogramme
+    
+    # Créer et colorier le dendrogramme
     dend <- as.dendrogram(arbre_phi2)
-
-    # Calcul des clusters
-    clusters <- cutree(arbre_phi2, k = k)
-
-    # Extraction des données pour dendrogramme
-    dend_data <- dendro_data(dend, type = "rectangle")
+    dend_colored <- color_branches(dend, k = k)
+    
+    # Extraire les données du dendrogramme coloré
+    dend_data <- dendro_data(dend_colored, type = "rectangle")
     segs <- dend_data$segments
     labels <- dend_data$labels
-
-    # Assigner les clusters aux labels via match (pas de merge)
-    labels$cluster <- clusters[match(labels$label, names(clusters))]
-    labels$cluster <- as.factor(labels$cluster)
-
-    # Inverser axes pour affichage horizontal
+    
+    # On récupère les couleurs via une astuce :
+    # color_branches ajoute un attribut "edgePar" avec une couleur sur chaque nœud
+    # Il faut "traverser" le dendrogramme pour en extraire l'ordre
+    extract_segment_colors <- function(dend) {
+      segs <- list()
+      get_segments <- function(node) {
+        if (is.leaf(node)) return()
+        attr <- attributes(node)
+        if (!is.null(attr$edgePar$col)) {
+          col <- attr$edgePar$col
+        } else {
+          col <- "gray"
+        }
+        x <- attr$height
+        for (i in 1:2) {
+          child <- node[[i]]
+          y <- attributes(child)$height
+          segs[[length(segs) + 1]] <<- list(
+            x = x, xend = y,
+            y = attr$members - sum(sapply(node[1:i], function(n) attributes(n)$members)),
+            yend = attr$members - sum(sapply(node[1:(i-1)], function(n) attributes(n)$members)),
+            col = col
+          )
+          get_segments(child)
+        }
+      }
+      get_segments(dend)
+      do.call(rbind, lapply(segs, as.data.frame))
+    }
+    
+    # Appel de la fonction pour obtenir les couleurs
+    segs_color_df <- extract_segment_colors(dend_colored)
+    
+    # Fusion avec les segments horizontaux
+    segs$col <- segs_color_df$col
+    
+    # Passage en horizontal
     max_x <- max(segs$yend, na.rm = TRUE)
     segs_horiz <- data.frame(
       x = max_x - segs$y,
       xend = max_x - segs$yend,
       y = segs$x,
-      yend = segs$xend
+      yend = segs$xend,
+      col = segs$col
     )
-
+    
+    # Ajouter les clusters aux labels
+    clusters <- cutree(arbre_phi2, k = k)
+    labels$cluster <- as.factor(clusters[match(labels$label, names(clusters))])
     labels$x_horiz <- max_x - labels$y
     labels$y_horiz <- labels$x
-
-    # Position étiquettes (un peu à droite de la branche la plus à droite)
-    label_offset <- max(segs_horiz$xend, na.rm = TRUE) + 0.1
-
-    # Création plot
+    label_offset <- max(segs_horiz$xend, na.rm = TRUE) + 0.3
+    
+    # Affichage plotly
     plot_ly(type = "scatter", mode = "lines") %>%
       add_segments(
         data = segs_horiz,
         x = ~x, xend = ~xend,
         y = ~y, yend = ~yend,
-        line = list(color = "grey"),
+        line = list(color = ~col, width = 1.2),
         showlegend = FALSE
       ) %>%
       add_text(
@@ -1144,14 +1178,13 @@ server <- function(input, output, session) {
         showlegend = FALSE
       ) %>%
       layout(
-        title = "Dendrogram (colored by cluster)",
-        xaxis = list(
-          title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE,
-          range = c(0, label_offset + 3)  # force l'échelle à laisser plus d'espace pour les étiquettes
-        ),
-        yaxis = list(title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE),
-        margin = list(l = 20, r = 200, t = 50, b = 20)
+        title = "Dendrogramme interactif avec branches colorées",
+        xaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE,
+                     range = c(0, label_offset + 2)),
+        yaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE),
+        margin = list(l = 20, r = 300, t = 50, b = 20)
       )
+    
   })
   
   # Observe new data, compute clusters and sync to Google Sheets
