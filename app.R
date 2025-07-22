@@ -1089,25 +1089,25 @@ server <- function(input, output, session) {
   
   # Render the dendrogram for hierarchical clustering
   output$dendrogram <- renderPlotly({
-  
+
     # Nombre de clusters
     k <- 6
-    
+
     # Conversion en dendrogramme
     dend <- as.dendrogram(arbre_phi2)
-    
+
     # Calcul des clusters
     clusters <- cutree(arbre_phi2, k = k)
-    
+
     # Extraction des données pour dendrogramme
     dend_data <- dendro_data(dend, type = "rectangle")
     segs <- dend_data$segments
     labels <- dend_data$labels
-    
+
     # Assigner les clusters aux labels via match (pas de merge)
     labels$cluster <- clusters[match(labels$label, names(clusters))]
     labels$cluster <- as.factor(labels$cluster)
-    
+
     # Inverser axes pour affichage horizontal
     max_x <- max(segs$yend, na.rm = TRUE)
     segs_horiz <- data.frame(
@@ -1116,13 +1116,13 @@ server <- function(input, output, session) {
       y = segs$x,
       yend = segs$xend
     )
-    
+
     labels$x_horiz <- max_x - labels$y
     labels$y_horiz <- labels$x
-    
+
     # Position étiquettes (un peu à droite de la branche la plus à droite)
     label_offset <- max(segs_horiz$xend, na.rm = TRUE) + 0.1
-    
+
     # Création plot
     plot_ly(type = "scatter", mode = "lines") %>%
       add_segments(
@@ -1145,7 +1145,10 @@ server <- function(input, output, session) {
       ) %>%
       layout(
         title = "Dendrogram (colored by cluster)",
-        xaxis = list(title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE),
+        xaxis = list(
+          title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE,
+          range = c(0, label_offset + 3)  # force l'échelle à laisser plus d'espace pour les étiquettes
+        ),
         yaxis = list(title = "", showline = FALSE, zeroline = FALSE, showticklabels = FALSE),
         margin = list(l = 20, r = 200, t = 50, b = 20)
       )
