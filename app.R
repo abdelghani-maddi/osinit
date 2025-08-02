@@ -26,7 +26,11 @@ library(explor)
 library(htmlwidgets)
 library(ggdendro)
 library(dendextend)
+library(shinyWidgets)
+library(bslib)
+library(colorspace)
 
+# library(esquisse)
 
 
 #######################
@@ -78,18 +82,18 @@ pal <- colorNumeric("plasma", domain = initiatives_par_pays$nb)
 #######################
 # Prepare Data for Community Governance Visualization
 #######################
-# 1️⃣ Group initiatives by country and governance type, and count occurrences
+# Step 1 Group initiatives by country and governance type, and count occurrences
 data_pie <- data %>%
   count(adm0_a3, CommunityGovernance, name = "nb_cg") %>%
   group_by(adm0_a3, CommunityGovernance) %>%  
   summarise(nb_cg = sum(nb_cg), .groups = "drop")  # Aggregate counts for governance types
 
-# 2️⃣ Select coordinates for countries
+# Step 2 Select coordinates for countries
 data_coord <- data %>%
   select(adm0_a3, Country, Longitude, Latitude) %>%
   unique()  # Remove duplicate coordinates
 
-# 3️⃣ Join the governance data with country coordinates
+# Step 3 Join the governance data with country coordinates
 data_pie <- data_pie %>%
   right_join(data_coord, by = "adm0_a3") %>%  # Properly join the data by country code
   replace_na(list(nb_cg = 0, CommunityGovernance = "No")) %>%  # Handle missing values
@@ -98,7 +102,7 @@ data_pie <- data_pie %>%
   pivot_wider(names_from = CommunityGovernance, values_from = nb_cg, values_fill = list(nb_cg = 0)) %>%  # Reshape data for pie chart
   st_drop_geometry()  # Remove geometry column if present
 
-# 4️⃣ Check and remove unnecessary columns
+# Step 4 Check and remove unnecessary columns
 data_pie <- data_pie %>% select(-any_of("0"))  # Remove any column named "0" (if it exists)
 
 #######################
@@ -134,7 +138,7 @@ arbre_phi2 <- perform_clustering(acm)
 #######################
 # Assign Clusters Based on Hierarchical Clustering
 #######################
-data$cluster <- cutree(arbre_phi2, 6)  # Cut the dendrogram into 5 clusters
+data$cluster <- cutree(arbre_phi2, 6)  # Cut the dendrogram into 6 clusters
 
 
 #######################
@@ -161,27 +165,65 @@ df_focus <- function() {
 # User Interface - Open Science Initiatives Dashboard
 # ================================================
 
-ui <- dashboardPage(
+# ui <- dashboardPage(
   
-  # Header Section: Title and width setup
+ui <- tagList(
+    tags$head(
+      tags$link(rel = "icon", type = "image/png", href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
+      tags$title("OS Initiatives Tracker")
+    ),
+    dashboardPage(    
+  #===========================
+  # Header with Title
+  #===========================
   dashboardHeader(
-    title = tags$strong("Open Science Initiatives Tracker"),  # Dashboard Title
-    titleWidth = 450                                  # Custom title width
+    title = tags$strong("Open Science Initiatives Tracker"),  # Bold dashboard title
+    titleWidth = 450                                          # Custom title width
   ),
   
-  # Sidebar Section: Navigation menu and logos
+  #===========================
+  # Sidebar Navigation Menu
+  #===========================
   dashboardSidebar(
     sidebarMenu(
-      # Navigation menu items
-      menuItem("Global Overview", tabName = "overview", icon = icon("globe")),
-      menuItem("MCA & Clustering", tabName = "mca", icon = icon("chart-bar")),
-      menuItem("Monitoring Principles", tabName = "principles", icon = icon("balance-scale")),
-      menuItem("Monitoring Landscape", tabName = "monitoring", icon = icon("table")),
-      menuItem("About", tabName = "about", icon = icon("info-circle")),
-      menuItem("FAQs", tabName = "FAQs", icon = icon("lightbulb")),
-    
       
-      # Clickable logo linking to external website (OSMI)
+      # 1. Introduction Section
+      menuItem("Introduction & Context", tabName = "overview", icon = icon("globe")),
+      
+      # 2. Exploration Section
+      menuItem("Explore Initiatives", icon = icon("map"),
+               menuSubItem("By Category", tabName = "by_category"),
+               menuSubItem("By Country / Region", tabName = "by_country")
+      ),
+      
+      # 3. Analytical Insights Section
+      menuItem("Analytical Insights", icon = icon("project-diagram"),
+               menuSubItem("MCA – Correspondence Analysis", tabName = "mca"),
+               menuSubItem("Typology – Clustering", tabName = "hcpc")
+      ),
+      
+      # 4. Monitoring Framework Section
+      menuItem("Monitoring Framework", icon = icon("balance-scale"),
+               menuSubItem("OSMI Principles", tabName = "principles"),
+               menuSubItem("Monitoring Landscape", tabName = "monitoring")
+      ),
+      
+      # 5. Community Contributions & Data
+      menuItem("Contribute & Data", icon = icon("users"),
+               menuSubItem("Suggest Initiative", tabName = "add_initiative"),
+               menuSubItem("Download Dataset", tabName = "download_data"),
+               menuSubItem("Source Code (GitHub)", 
+                           href = "https://github.com/abdelghani-maddi/osinit", 
+                           newtab = TRUE)
+      ),
+      
+      # 6. Project Resources
+      menuItem("Resources", icon = icon("book"),
+               menuSubItem("About the Project", tabName = "about"),
+               menuSubItem("FAQs", tabName = "FAQs")
+      ),
+      
+      # 7. Logos & External Links
       tags$li(class = "dropdown", 
               tags$a(href = "https://open-science-monitoring.org/", 
                      target = "_blank", 
@@ -193,7 +235,6 @@ ui <- dashboardPage(
               )
       ),
       
-      # Clickable logo linking to external website (GEMASS)
       tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
                      target = "_blank", 
@@ -205,8 +246,7 @@ ui <- dashboardPage(
               )
       ),
       
-      
-      # Fixed-position logo at the bottom for ANR link
+      # 8. ANR logo fixed at the bottom of the sidebar
       tags$div(
         tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
                tags$img(src = "logo_ANR.jpg", height = "40px", style = "margin: 10px;")
@@ -216,151 +256,364 @@ ui <- dashboardPage(
     )
   ),
   
-  # Body Section: Main visual content and layout
-  dashboardBody(
-    
-    tags$head(
-      # Custom Sidebar Hover Effects for each tab
-      tags$style(HTML("
-        .sidebar-menu li:nth-child(1) a:hover {
-          background-color: #ba3470 !important;  /* Pink for Global Overview */
-          color: white !important;
-        }
-        .sidebar-menu li:nth-child(2) a:hover {
-          background-color: #17a2b8 !important;  /* Cyan for MCA & Clustering */
-          color: white !important;
-        }
-        .sidebar-menu li:nth-child(3) a:hover {
-          background-color: #ffc107 !important;  /* Yellow for About */
-          color: black !important;
-        }
-        .sidebar-menu li:nth-child(4) a:hover {
-          background-color: #8aa728 !important;  /* Green for FAQs */
-          color: white !important;
-        }
-        .sidebar-menu li:nth-child(5) a:hover {
-          background-color: #a72859 !important;  /* Pink for Logo */
-          color: white !important;
-        }
-        .sidebar-menu li:nth-child(6) a:hover {
-          background-color: #288aa7 !important;  /* Blue for Logo */
-          color: white !important;
-        }
-        .sidebar-menu li:nth-child(7) a:hover {
-          background-color: #8aa728 !important;  /* Pink for Global Overview */
-          color: white !important;
-        }
-        .sidebar-menu li:nth-child(8) a:hover {
-          background-color: #288aa7 !important;  /* Blue for Logo */
-          color: white !important;
-        }
-      ")),
-    
-      tags$style(HTML("
-  .badge {
-    font-size: 12px;
-    padding: 5px 8px;
-    border-radius: 8px;
-    color: white;
-  }
-  .badge-primary { background-color: #007bff; }
-  .badge-success { background-color: #28a745; }
-  .badge-warning { background-color: #ffc107; color: black; }
-  .badge-info    { background-color: #17a2b8; }
-  .badge-danger  { background-color: #dc3545; }
-  .badge-secondary { background-color: #6c757d; }
-  table.dataTable td { vertical-align: middle; }
-  ")),
-      
-      tags$style(HTML("
-  .btn-visit {
-    background-color: #007bff;
-    color: white;
-    padding: 5px 12px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-size: 12px;
-    transition: background-color 0.3s ease;
-  }
 
-  .btn-visit:hover {
-    background-color: #0056b3;
-    text-decoration: none;
-  }
 
-  .wrap-text {
-    white-space: normal !important;
-    word-wrap: break-word;
-  }
-
-  table.dataTable td {
-    vertical-align: middle;
-    font-size: 14px;
-  }
-"))
-      
-    ),
+#===========================
+# Dashboard Body
+#===========================
+dashboardBody(
+  
+  #===========================
+  # Favicon and Page Title (Browser Tab)
+  #===========================
+  tags$head(
+    tags$link(rel = "icon", type = "image/png",
+              href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
+    tags$title("OS Initiatives Tracker")
+  ),
+  
+  id = "tabs",  # Used for tab navigation
+  
+  #----------- Custom CSS Styles -----------
+  tags$head(
     
+    # Sidebar hover effects per menu item (child position must match menu order)
     tags$style(HTML("
-  .badge {
-    font-size: 13px;
-    padding: 6px 10px;
-    border-radius: 12px;
-    color: white;
-    margin-right: 5px;
+      .sidebar-menu li:nth-child(1) a:hover { background-color: #ba3470 !important; color: white !important; }
+      .sidebar-menu li:nth-child(2) a:hover { background-color: #17a2b8 !important; color: white !important; }
+      .sidebar-menu li:nth-child(3) a:hover { background-color: #ffc107 !important; color: black !important; }
+      .sidebar-menu li:nth-child(4) a:hover { background-color: #8aa728 !important; color: white !important; }
+      .sidebar-menu li:nth-child(5) a:hover { background-color: #a72859 !important; color: white !important; }
+      .sidebar-menu li:nth-child(6) a:hover { background-color: #288aa7 !important; color: white !important; }
+      .sidebar-menu li:nth-child(7) a:hover { background-color: #8aa728 !important; color: white !important; }
+      .sidebar-menu li:nth-child(8) a:hover { background-color: #288aa7 !important; color: white !important; }
+    ")),
+    
+    # General badge styling (for colored labels like status tags)
+    tags$style(HTML("
+      .badge {
+        font-size: 13px;
+        padding: 6px 10px;
+        border-radius: 12px;
+        color: white;
+        margin-right: 5px;
+      }
+      .badge-primary { background-color: #007bff; }
+      .badge-success { background-color: #28a745; }
+      .badge-warning { background-color: #ffc107; color: black; }
+      .badge-info    { background-color: #17a2b8; }
+      .badge-danger  { background-color: #dc3545; }
+      .badge-secondary { background-color: #6c757d; }
+    ")),
+    
+    # Button styling (e.g., "Visit" links or dataset access)
+    tags$style(HTML("
+      .btn-visit {
+        background-color: #007bff;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 12px;
+        transition: background-color 0.3s ease;
+      }
+      .btn-visit:hover {
+        background-color: #0056b3;
+        text-decoration: none;
+      }
+    ")),
+    
+    # Text wrapping and datatable styles
+    tags$style(HTML("
+      .wrap-text {
+        white-space: normal !important;
+        word-wrap: break-word;
+      }
+      table.dataTable td {
+        vertical-align: middle;
+        font-size: 14px;
+      }
+    ")),
+####
+tags$style(HTML("
+  .section-card {
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
   }
-  ")),
-    tabItems(
-      
-      # --------------------------------------------
-      # Global Overview Tab
-      # --------------------------------------------
-      tabItem(tabName = "overview",
-              fluidRow(
-                # Total Initiatives Box
-                box(
-                  title = "Global Open Science Initiatives",  
-                  status = "primary",  
-                  solidHeader = TRUE,  
-                  width = 4,
-                  height = "521px",
-                  style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);",
-                  tags$div(
-                    style = "text-align: center; padding-top: 50px;",
-                    tags$i(class = "fa fa-lightbulb-o", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
-                    tags$div(
-                      style = "font-size: 100px; font-weight: bold; color: #007bff;",
-                      textOutput("distinct_initiatives")
-                    ),
-                    tags$div(
-                      style = "font-size: 25px; font-weight: bold; color: #333;",
-                      "Total Number of Initiatives"
-                    ),
-                    tags$p(style = "font-size: 15px; margin-top: 10px; color: #555;"),
-                    # Links to data and contribution forms
-                    tags$a(
-                      href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit#gid=1136935931",
-                      target = "_blank",
-                      "🔗 Access and Download Data",
-                      style = "color: #ffffff; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px; 
-                               background-color: #007bff; border-radius: 10px; font-size: 16px;"
-                    ),
-                    tags$a(
-                      href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
-                      target = "_blank",
-                      "🔗 Add Initiatives and Enrich Data",
-                      style = "color: #0c0c0d; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px; 
-                               background-color: #6aff00; border-radius: 10px; font-size: 16px;"
+
+  .section-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  }
+
+  .section-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+    display: block;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    color: #666;
+  }
+
+  /* Slightly deeper pastel base colors */
+  .explore-card    { background-color: #cbe5f3 !important; color: #004d66; }
+  .analyze-card    { background-color: #f9e0c2 !important; color: #995c00; }
+  .monitor-card    { background-color: #d7ebd7 !important; color: #2e7d32; }
+  .contribute-card { background-color: #f2d4e1 !important; color: #880e4f; }
+  .dataset-card    { background-color: #e6e6be !important; color: #6d6d00; }
+  .about-card      { background-color: #c6d8fc !important; color: #1a237e; }
+
+  /* Hover: lighter version for each */
+  .explore-card:hover    { background-color: #d9eef9 !important; }
+  .analyze-card:hover    { background-color: #fde8d1 !important; }
+  .monitor-card:hover    { background-color: #e4f3e4 !important; }
+  .contribute-card:hover { background-color: #f6e1eb !important; }
+  .dataset-card:hover    { background-color: #efefcc !important; }
+  .about-card:hover      { background-color: #d8e4fc !important; }
+"))
+)
+ ,
+  
+
+#--------------------------------------------------
+# Global Overview Tab
+#--------------------------------------------------
+tabItems(
+  
+tabItem(tabName = "overview",
+        
+        #-----------------------------
+        # INTRODUCTION HEADER BOX
+        #-----------------------------
+        fluidRow(
+          box(
+            title = "Welcome to the Open Science Initiatives Tracker",
+            status = "primary",
+            solidHeader = TRUE,
+            width = 12,
+            style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);",
+            
+            # Introductory paragraph
+            div(
+              style = "font-size:16px; padding:10px;",
+              HTML("
+          <p><strong>This dashboard helps you explore, analyze, and contribute to the global landscape of Open Science initiatives.</strong></p>
+          <p>Use the sidebar menu to navigate the tool.</p>
+        ")
+            ),
+            
+            # Counter and action buttons
+            tags$div(
+              style = "text-align: center; padding-top: 50px;",
+              tags$i(class = "fa fa-lightbulb-o", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
+              
+              tags$div(
+                style = "font-size: 100px; font-weight: bold; color: #007bff;",
+                textOutput("distinct_initiatives")
+              ),
+              
+              tags$div(
+                style = "font-size: 25px; font-weight: bold; color: #333;",
+                "Total Number of Initiatives"
+              ),
+              
+              # Data access and contribution buttons
+              tags$a(
+                href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit#gid=1136935931",
+                target = "_blank",
+                "🔗 Access and Download Data",
+                style = "color: #ffffff; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px;
+                   background-color: #007bff; border-radius: 10px; font-size: 16px;"
+              ),
+              tags$a(
+                href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
+                target = "_blank",
+                "🔗 Add Initiatives and Enrich Data",
+                style = "color: #0c0c0d; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px;
+                   background-color: #6aff00; border-radius: 10px; font-size: 16px;"
+              )
+            )
+          )
+        ),
+        
+        #-----------------------------
+        # VISUAL NAVIGATION CARDS (1)
+        #-----------------------------
+        fluidRow(
+          # Explore
+          column(
+            width = 4,
+            div(
+              class = "section-card explore-card",
+              onclick = "Shiny.setInputValue('nav_to', 'by_category')",
+              icon("globe", class = "section-icon"),
+              div(class = "section-title", "Explore Initiatives"),
+              div(class = "section-subtitle", "Map, categories, and countries")
+            )
+          ),
+          
+          # Analyze
+          column(
+            width = 4,
+            div(
+              class = "section-card analyze-card",
+              onclick = "Shiny.setInputValue('nav_to', 'mca')",
+              icon("project-diagram", class = "section-icon"),
+              div(class = "section-title", "Analyze Structure"),
+              div(class = "section-subtitle", "MCA and clustering analysis")
+            )
+          ),
+          
+          # Monitor
+          column(
+            width = 4,
+            div(
+              class = "section-card monitor-card",
+              onclick = "Shiny.setInputValue('nav_to', 'principles')",
+              icon("balance-scale", class = "section-icon"),
+              div(class = "section-title", "Monitoring Framework"),
+              div(class = "section-subtitle", "OSMI principles and landscape overview")
+            )
+          )
+        ),
+        
+        #-----------------------------
+        # VISUAL NAVIGATION CARDS (2)
+        #-----------------------------
+        fluidRow(
+          # Contribute
+          column(
+            width = 4,
+            div(
+              class = "section-card contribute-card",
+              onclick = "Shiny.setInputValue('nav_to', 'add_initiative')",
+              icon("plus-circle", class = "section-icon"),
+              div(class = "section-title", "Contribute"),
+              div(class = "section-subtitle", "Suggest or edit initiatives")
+            )
+          ),
+          
+          # Dataset
+          column(
+            width = 4,
+            div(
+              class = "section-card dataset-card",
+              onclick = "Shiny.setInputValue('nav_to', 'download_data')",
+              icon("table", class = "section-icon"),
+              div(class = "section-title", "Dataset Access"),
+              div(class = "section-subtitle", "View or download data")
+            )
+          ),
+          
+          # About
+          column(
+            width = 4,
+            div(
+              class = "section-card about-card",
+              onclick = "Shiny.setInputValue('nav_to', 'about')",
+              icon("info-circle", class = "section-icon"),
+              div(class = "section-title", "About"),
+              div(class = "section-subtitle", "Project and contributors")
+            )
+          )
+        )),
+
+
+        #--------------------------------------------------
+        # Suggest Initiative Tab
+        #--------------------------------------------------
+        tabItem(tabName = "add_initiative",
+                fluidRow(
+                  box(
+                    title = "Suggest a New Initiative",
+                    width = 12,
+                    status = "success",
+                    solidHeader = TRUE,
+                    
+                    # Description + embedded Google Form
+                    div(
+                      style = "padding: 10px; font-size: 16px;",
+                      tags$p("Use the embedded form below to suggest a new Open Science initiative for inclusion in our dashboard."),
+                      
+                      tags$iframe(
+                        src = "https://docs.google.com/forms/d/e/1FAIpQLSfCNlKAj8BV-6d9Ls5SiG1tQVEBU28NTYqztt3jszbJQX5gyA/viewform?embedded=true",
+                        width = "100%",
+                        height = "1000px",
+                        frameborder = "0",
+                        style = "border: none;"
+                      )
                     )
                   )
-                ),
-                
-                # Initiatives by Category Chart Box
+                )
+        ),
+
+        #--------------------------------------------------
+        # Download Dataset Tab
+        #--------------------------------------------------
+        tabItem(tabName = "download_data",
+                fluidRow(
+                  box(
+                    title = "Access the Dataset",
+                    width = 12,
+                    status = "info",
+                    solidHeader = TRUE,
+                    
+                    div(
+                      style = "padding: 10px; font-size: 16px;",
+                      
+                      # Button to open full Google Sheet in a new tab
+                      tags$div(
+                        style = "margin-bottom: 15px; text-align: right;",
+                        tags$a(
+                          href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1136935931",
+                          target = "_blank",
+                          class = "btn btn-primary",
+                          icon("external-link-alt"),
+                          "Open in Google Sheets"
+                        )
+                      ),
+                      
+                      # Live embedded view of the spreadsheet (read-only preview)
+                      tags$p("Below is a live preview of the dataset. Use the button above to open the full version for download or copy."),
+                      
+                      tags$iframe(
+                        src = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/preview",
+                        width = "100%",
+                        height = "800px",
+                        frameborder = "0",
+                        style = "border: none;"
+                      )
+                    )
+                  )
+                )
+        ),
+        
+      
+        #--------------------------------------------------
+        # Initiatives by Category Tab
+        #--------------------------------------------------
+        
+      tabItem(tabName = "by_category",
+              fluidRow(
                 box(
                   title = "Initiatives by Category", 
                   status = "info", 
                   solidHeader = TRUE, 
-                  width = 8,
+                  width = 12,
                   plotlyOutput("category_plot"),
                   tags$p(
                     "This bar chart provides an overview of the number of initiatives grouped by their focus area. Hover over each bar to view detailed counts, or click on a bar to explore the specific initiatives within the selected category."
@@ -368,7 +621,6 @@ ui <- dashboardPage(
                 )
               ),
               
-              # Selected Initiatives List Box
               fluidRow(
                 box(
                   title = "Selected Initiatives List",
@@ -381,45 +633,103 @@ ui <- dashboardPage(
                     style = "color: #555;"
                   )
                 )
-              ),
-              
-              # Maps for Distribution and Governance
-              fluidRow(
-                column(
-                  width = 6,
-                  box(
-                    title = "Global Distribution of Initiatives",
-                    status = "success",
-                    solidHeader = TRUE,
-                    width = NULL,
-                    leafletOutput("world_map"),
-                    tags$style(HTML(popup_css)),
-                    tags$p(
-                      "This map visualizes the geographical distribution of open science initiatives around the world. Click on the bubbles to view the number of initiatives per country and a list of the specific projects."
-                    )
-                  )
-                ),
-                column(
-                  width = 6,
-                  box(
-                    title = "Community Governance Map",
-                    status = "warning",
-                    solidHeader = TRUE,
-                    width = NULL,
-                    leafletOutput("comm_gov"),
-                    tags$p(
-                      "This map displays a comparison of community governance practices in open science initiatives. The pie charts represent the proportion of initiatives with and without community-driven governance structures."
-                    )
-                  )
-                )
               )
       ),
+      
+
+      #--------------------------------------------------
+      # Global Distribution of Initiatives Tab
+      #--------------------------------------------------
+      
+tabItem(tabName = "by_country",
+        
+        # First Box (Full Width)
+        fluidRow(
+          column(
+            width = 12,
+            box(
+              title = "Global Distribution of Initiatives",
+              status = "success",
+              solidHeader = TRUE,
+              width = NULL,
+              leafletOutput("world_map"),
+              tags$style(HTML(popup_css)),
+              tags$p(
+                "This map visualizes the geographical distribution of open science initiatives around the world. Click on the bubbles to view the number of initiatives per country and a list of the specific projects."
+              )
+            )
+          )
+        ),
+        
+        # Second Box (Full Width, Below)
+        fluidRow(
+          column(
+            width = 12,
+            box(
+              title = "Community Governance Map",
+              status = "warning",
+              solidHeader = TRUE,
+              width = NULL,
+              leafletOutput("comm_gov"),
+              tags$p(
+                "This map displays a comparison of community governance practices in open science initiatives. The pie charts represent the proportion of initiatives with and without community-driven governance structures."
+              )
+            )
+          )
+        )
+)
+,
       
       # --------------------------------------------
       # Monitoring principles Tab
       # --------------------------------------------
       
       tabItem(tabName = "principles",
+      
+              tags$head(
+                tags$style(HTML("
+    .section-card {
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      height: 100%;
+      transition: all 0.3s ease-in-out;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .section-card:hover {
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      transform: translateY(-5px);
+    }
+
+    .section-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    .explore-card    { background-color: #007bff; }   /* Blue */
+    .analyze-card    { background-color: #6f42c1; }   /* Purple */
+    .monitor-card    { background-color: #17a2b8; }   /* Teal */
+    .contribute-card { background-color: #28a745; }   /* Green */
+    .dataset-card    { background-color: #20c997; }   /* Mint */
+    .about-card      { background-color: #fd7e14; }   /* Orange */
+  "))
+              )
+              ,        
+              
+              
               tags$head(
                 tags$style(HTML("
       .principle-section {
@@ -540,6 +850,7 @@ ui <- dashboardPage(
     "))
               ),
               
+ 
               fluidRow(
                 column(12,
                        div(class = "principle-section",
@@ -628,12 +939,7 @@ ui <- dashboardPage(
                        )
                 )
               )
-      )
-      
-      
-      
-      
-      ,
+      ),
       
       
       # --------------------------------------------
@@ -709,8 +1015,9 @@ ui <- dashboardPage(
                          )
                        )
                 )
+              )
               ),
-              
+          tabItem(tabName = "hcpc",    
               fluidRow(
                 # Dendrogram + Interpretation
                 column(width = 7.5,
@@ -852,20 +1159,11 @@ ui <- dashboardPage(
                 )
               )
       )
+)
     )
-  )
+)
 )
 
-# --------------------------------------------
-# Favicon and Browser Tab Title
-# --------------------------------------------
-ui <- tagList(
-  tags$head(
-    tags$link(rel = "icon", type = "image/png", href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
-    tags$title("OS Initiatives Dashboard")
-  ),
-  ui
-)
 
 
 # =============================================
@@ -873,6 +1171,17 @@ ui <- tagList(
 # =============================================
 
 server <- function(input, output, session) {
+  
+  
+  observe({
+    print(paste0("nav_to: ", input$nav_to))
+  })
+  observeEvent(input$nav_to, {
+    updateTabItems(session, "tabs", selected = input$nav_to)
+  })
+  
+  
+
   
   # Render the GEMASS logo image in the sidebar
   output$logo_image <- renderImage({
@@ -1155,7 +1464,7 @@ server <- function(input, output, session) {
     labels$cluster <- as.factor(clusters[match(labels$label, names(clusters))])
     labels$x_horiz <- max_x - labels$y
     labels$y_horiz <- labels$x
-    label_offset <- max(segs_horiz$xend, na.rm = TRUE) + 0.3
+    label_offset <- max(segs_horiz$xend, na.rm = TRUE) + 0.2
     
     # Affichage plotly
     plot_ly(type = "scatter", mode = "lines") %>%
@@ -1163,22 +1472,26 @@ server <- function(input, output, session) {
         data = segs_horiz,
         x = ~x, xend = ~xend,
         y = ~y, yend = ~yend,
-        line = list(color = ~col, width = 1.2),
+        line = list(color = ~col, width = 3),
         showlegend = FALSE
       ) %>%
+      
       add_text(
         data = labels,
         x = label_offset,
         y = ~y_horiz,
         text = ~label,
-        textfont = list(size = 13),
+        # textfont = list(size = 13),
+        textfont = list(size = 13, family = "Arial Black"),
         textposition = "right",
         color = ~cluster,
         colors = "Set1",
         showlegend = FALSE
       ) %>%
+    
+      
       layout(
-        title = "Dendrogramme interactif avec branches colorées",
+        title = "Interactive dendrogram",
         xaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE,
                      range = c(0, label_offset + 5)),
         yaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE),
@@ -1192,7 +1505,7 @@ server <- function(input, output, session) {
     data <- data_reactive()
     
     clustered_data <- data %>%
-      mutate(cluster = cutree(arbre_phi2, k = 4))
+      mutate(cluster = cutree(arbre_phi2, k = 6))
     
     sheet_id <- "1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8"
     write_sheet(clustered_data, ss = sheet_id, sheet = "Clusters")
