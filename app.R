@@ -170,7 +170,18 @@ df_focus <- function() {
 ui <- tagList(
     tags$head(
       tags$link(rel = "icon", type = "image/png", href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
-      tags$title("OS Initiatives Tracker")
+      tags$title("OS Initiatives Tracker"),
+      
+      tags$style(HTML("
+      .sidebar-menu li:nth-child(1) a:hover { background-color: #ba3470 !important; color: white !important; }
+      .sidebar-menu li:nth-child(2) a:hover { background-color: #17a2b8 !important; color: white !important; }
+      .sidebar-menu li:nth-child(3) a:hover { background-color: #ffc107 !important; color: black !important; }
+      .sidebar-menu li:nth-child(4) a:hover { background-color: #8aa728 !important; color: white !important; }
+      .sidebar-menu li:nth-child(5) a:hover { background-color: #a72859 !important; color: white !important; }
+      .sidebar-menu li:nth-child(6) a:hover { background-color: #288aa7 !important; color: white !important; }
+      .sidebar-menu li:nth-child(7) a:hover { background-color: #8aa728 !important; color: white !important; }
+      .sidebar-menu li:nth-child(8) a:hover { background-color: #288aa7 !important; color: white !important; }
+    "))
     ),
     dashboardPage(    
   #===========================
