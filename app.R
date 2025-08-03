@@ -177,8 +177,22 @@ ui <- tagList(
   # Header with Title
   #===========================
   dashboardHeader(
-    title = tags$strong("Open Science Initiatives Tracker"),  # Bold dashboard title
-    titleWidth = 450                                          # Custom title width
+    title = tags$strong("Open Science Initiatives Tracker"),
+    titleWidth = 500 # ,
+
+    # # External Logos in Header (aligned right)
+    # tags$li(
+    #   class = "dropdown",
+    #   tags$a(href = "https://open-science-monitoring.org/", target = "_blank",
+    #          tags$img(src = "logo-osmi.png", height = "30px",
+    #                   style = "padding: 5px;"))
+    # ),
+    # tags$li(
+    #   class = "dropdown",
+    #   tags$a(href = "https://www.gemass.fr/contract/openit/", target = "_blank",
+    #          tags$img(src = "logo.png", height = "30px",
+    #                   style = "padding: 5px;"))
+    # )
   ),
   
   #===========================
@@ -188,7 +202,7 @@ ui <- tagList(
     sidebarMenu(
       id = "tabs",  # Used for tab navigation
       # 1. Introduction Section
-      menuItem("Introduction & Context", tabName = "overview", icon = icon("globe")),
+      menuItem(" Global overview", tabName = "overview", icon = icon("globe")),
       
       # 2. Exploration Section
       menuItem("Explore Initiatives", icon = icon("map"),
@@ -224,37 +238,41 @@ ui <- tagList(
       ),
       
       # 7. Logos & External Links
-      tags$li(class = "dropdown", 
-              tags$a(href = "https://open-science-monitoring.org/", 
-                     target = "_blank", 
-                     tags$img(
-                       src = "logo-osmi.png", 
-                       height = "40px", 
-                       style = "margin: 0px 0 0px 0px; display: block;"
-                     )
-              )
-      ),
+      # tags$li(class = "dropdown", 
+      #         tags$a(href = "https://open-science-monitoring.org/", 
+      #                target = "_blank", 
+      #                tags$img(
+      #                  src = "logo-osmi.png", 
+      #                  height = "40px", 
+      #                  style = "margin: 0px 0 0px 0px; display: block;"
+      #                )
+      #         )
+      # ),
       
       tags$li(class = "dropdown", 
               tags$a(href = "https://www.gemass.fr/contract/openit/", 
                      target = "_blank", 
                      tags$img(
                        src = "logo.png", 
-                       height = "40px", 
+                       height = "45px", 
                        style = "margin: 0px 0 0px 0px; display: block;"
                      )
               )
       ),
       
-      # 8. ANR logo fixed at the bottom of the sidebar
-      tags$div(
-        tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
-               tags$img(src = "logo_ANR.jpg", height = "40px", style = "margin: 10px;")
-        ),
-        style = "position: absolute; bottom: 20px; left: 10px;"
-      )
+  # 8. ANR logo fixed at the bottom of the sidebar
+  tags$div(
+    style = "position: absolute; bottom: 20px; left: 10px;",
+    tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
+           tags$img(src = "logo_ANR.jpg", height = "33px", style = "margin: 5px; display: block;")
+    ),
+    tags$a(href = "https://creativecommons.org/licenses/by/4.0/deed.fr", target = "_blank",
+           tags$img(src = "CC_BY.png", height = "30px", style = "margin: 5px; display: block;")
     )
-  ),
+  )
+  
+    )
+),
   
 
 
@@ -503,6 +521,23 @@ dashboardBody(
 .btn-explore:hover {
   background-color: #0056b3;
 }
+")),
+    
+    tags$style(HTML("
+  .badge {
+    display: inline-block;
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    color: white;
+    margin-right: 5px;
+  }
+  .badge-primary   { background-color: #007bff; }
+  .badge-success   { background-color: #28a745; }
+  .badge-warning   { background-color: #ffc107; color: black; }
+  .badge-info      { background-color: #17a2b8; }
+  .badge-danger    { background-color: #dc3545; }
+  .badge-secondary { background-color: #6c757d; }
 "))
     
   ),
@@ -587,75 +622,7 @@ tabItem(tabName = "overview",
         #-----------------------------
         # VISUAL NAVIGATION CARDS (1)
         #-----------------------------
-        # fluidRow(
-        #   # Explore
-        # 
-        #     column(
-        #       width = 4,
-        #       div(
-        #         class = "interactive-section-box",
-        #         tags$div(
-        #           class = "section-main",
-        #           icon("map", class = "section-icon"),
-        #           div(class = "section-title", "Explore Initiatives"),
-        #           div(class = "section-subtitle", "Navigate categories and countries")
-        #         ),
-        #         tags$div(
-        #           class = "section-hover-menu",
-        #           actionButton("go_category", "By Category", class = "btn-explore", 
-        #                        onclick = "Shiny.setInputValue('nav_to', 'by_category')"),
-        #           actionButton("go_country", "By Country / Region", class = "btn-explore", 
-        #                        onclick = "Shiny.setInputValue('nav_to', 'by_country')")
-        #         )
-        #       )
-        #     ),
-        #     
-            
-          # Analyze
-          # 
-          # column(
-          #   width = 4,
-          #   div(
-          #     class = "interactive-section-box",
-          #     tags$div(
-          #       class = "section-main",
-          #       icon("project-diagram", class = "section-icon"),
-          #       div(class = "section-title", "Analyze Structure"),
-          #       div(class = "section-subtitle", "Explore MCA and clustering")
-          #     ),
-          #     tags$div(
-          #       class = "section-hover-menu",
-          #       actionButton("go_mca", "MCA – Correspondence Analysis", class = "btn-explore", 
-          #                    onclick = "Shiny.setInputValue('nav_to', 'mca')"),
-          #       actionButton("go_clustering", "Typology – Clustering", class = "btn-explore", 
-          #                    onclick = "Shiny.setInputValue('nav_to', 'hcpc')")
-          #     )
-          #   )
-          # ),
-          
-          
-          # Monitor
-        # column(
-        #   width = 4,
-        #   div(
-        #     class = "interactive-section-box",
-        #     tags$div(
-        #       class = "section-main",
-        #       icon("balance-scale", class = "section-icon"),
-        #       div(class = "section-title", "Monitoring Framework"),
-        #       div(class = "section-subtitle", "Principles and global landscape")
-        #     ),
-        #     tags$div(
-        #       class = "section-hover-menu",
-        #       actionButton("go_principles", "OSMI Principles", class = "btn-explore", 
-        #                    onclick = "Shiny.setInputValue('nav_to', 'principles')"),
-        #       actionButton("go_monitoring", "Monitoring Landscape", class = "btn-explore", 
-        #                    onclick = "Shiny.setInputValue('nav_to', 'monitoring')")
-        #     )
-        #   )
-        # )
         
-        # ),
       fluidRow(
         # EXPLORE BOX
         column(
@@ -709,23 +676,7 @@ tabItem(tabName = "overview",
         #-----------------------------
         fluidRow(
           # Contribute
-          # column(
-          #   width = 4,
-          #   div(
-          #     class = "interactive-section-box",
-          #     tags$div(
-          #       class = "section-main",
-          #       icon("plus-circle", class = "section-icon"),
-          #       div(class = "section-title", "Contribute"),
-          #       div(class = "section-subtitle", "Suggest or edit initiatives")
-          #     ),
-          #     tags$div(
-          #       class = "section-hover-menu",
-          #       actionButton("go_add", "Suggest Initiative", class = "btn-explore", 
-          #                    onclick = "Shiny.setInputValue('nav_to', 'add_initiative')")
-          #     )
-          #   )
-          # ),
+
           column(
             width = 4,
             div(
@@ -743,23 +694,6 @@ tabItem(tabName = "overview",
           
           # Dataset
          
-          # column(
-          #   width = 4,
-          #   div(
-          #     class = "interactive-section-box",
-          #     tags$div(
-          #       class = "section-main",
-          #       icon("database", class = "section-icon"),
-          #       div(class = "section-title", "Dataset"),
-          #       div(class = "section-subtitle", "View or download data")
-          #     ),
-          #     tags$div(
-          #       class = "section-hover-menu",
-          #       actionButton("go_dataset", "Download Dataset", class = "btn-explore", 
-          #                    onclick = "Shiny.setInputValue('nav_to', 'download_data')")
-          #     )
-          #   )
-          # ),
           column(
             width = 4,
             div(
@@ -777,25 +711,6 @@ tabItem(tabName = "overview",
           
           # About
 
-          # column(
-          #   width = 4,
-          #   div(
-          #     class = "interactive-section-box",
-          #     tags$div(
-          #       class = "section-main",
-          #       icon("info-circle", class = "section-icon"),
-          #       div(class = "section-title", "About"),
-          #       div(class = "section-subtitle", "Project and contributors")
-          #     ),
-          #     tags$div(
-          #       class = "section-hover-menu",
-          #       actionButton("go_about", "About the Project", class = "btn-explore", 
-          #                    onclick = "Shiny.setInputValue('nav_to', 'about')"),
-          #       actionButton("go_faq", "FAQs", class = "btn-explore", 
-          #                    onclick = "Shiny.setInputValue('nav_to', 'FAQs')")
-          #     )
-          #   )
-          # )
           column(
             width = 4,
             div(
