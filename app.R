@@ -186,7 +186,7 @@ ui <- tagList(
   #===========================
   dashboardSidebar(
     sidebarMenu(
-      
+      id = "tabs",  # Used for tab navigation
       # 1. Introduction Section
       menuItem("Introduction & Context", tabName = "overview", icon = icon("globe")),
       
@@ -262,7 +262,7 @@ ui <- tagList(
 # Dashboard Body
 #===========================
 dashboardBody(
-  
+  id = "tabs",  # Used for tab navigation
   #===========================
   # Favicon and Page Title (Browser Tab)
   #===========================
@@ -272,7 +272,6 @@ dashboardBody(
     tags$title("OS Initiatives Tracker")
   ),
   
-  id = "tabs",  # Used for tab navigation
   
   #----------- Custom CSS Styles -----------
   tags$head(
@@ -396,59 +395,74 @@ tabItems(
   
 tabItem(tabName = "overview",
         
-        #-----------------------------
-        # INTRODUCTION HEADER BOX
-        #-----------------------------
-        fluidRow(
-          box(
-            title = "Welcome to the Open Science Initiatives Tracker",
-            status = "primary",
-            solidHeader = TRUE,
-            width = 12,
-            style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);",
+      # -----------------------------
+      # OVERVIEW INTRO BOX – Enhanced
+      # -----------------------------
+      fluidRow(
+        box(
+          title = div(
+            icon("globe-europe", style = "margin-right: 10px;"),  # More suitable icon
+            "Welcome to the Open Science Initiatives Tracker"
+          ),
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); background: linear-gradient(to right, #f4f9ff, #ffffff);",
+          
+          # Introductory paragraph with improved text and styling
+          div(
+            style = "font-size:17px; line-height:1.7; padding:20px;",
+            HTML("
+        <p><strong>This dashboard provides a dynamic and community-driven overview of Open Science initiatives around the world.</strong></p>
+        <p>It is designed to support the discovery, classification, and comparative analysis of initiatives promoting openness in scholarly communication.</p>
+        <p><em>Note:</em> Institutional Open Science policies are not included. The dashboard focuses instead on national, community, or infrastructure-based initiatives.</p>
+        <p>You can navigate using the <strong>sidebar menu</strong> or the <strong>interactive cards</strong> just below.</p>
+      ")
+          ),
+          
+          # Counter and action buttons
+          tags$div(
+            style = "text-align: center; padding-bottom: 40px;",
             
-            # Introductory paragraph
-            div(
-              style = "font-size:16px; padding:10px;",
-              HTML("
-          <p><strong>This dashboard helps you explore, analyze, and contribute to the global landscape of Open Science initiatives.</strong></p>
-          <p>Use the sidebar menu to navigate the tool.</p>
-        ")
+            tags$i(class = "fa fa-satellite-dish", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
+            
+            tags$div(
+              style = "font-size: 100px; font-weight: bold; color: #007bff;",
+              textOutput("distinct_initiatives")
             ),
             
-            # Counter and action buttons
             tags$div(
-              style = "text-align: center; padding-top: 50px;",
-              tags$i(class = "fa fa-lightbulb-o", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
+              style = "font-size: 25px; font-weight: bold; color: #333;",
+              "Total number of initiatives included"
+            ),
+            
+            # Action buttons with improved text and icons
+            tags$div(
+              style = "margin-top: 25px;",
               
-              tags$div(
-                style = "font-size: 100px; font-weight: bold; color: #007bff;",
-                textOutput("distinct_initiatives")
-              ),
-              
-              tags$div(
-                style = "font-size: 25px; font-weight: bold; color: #333;",
-                "Total Number of Initiatives"
-              ),
-              
-              # Data access and contribution buttons
               tags$a(
                 href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit#gid=1136935931",
                 target = "_blank",
-                "🔗 Access and Download Data",
-                style = "color: #ffffff; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px;
-                   background-color: #007bff; border-radius: 10px; font-size: 16px;"
+                icon("database", class = "me-2"),
+                "View & Download Dataset",
+                style = "color: #ffffff; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
+                   background-color: #007bff; border-radius: 12px; font-size: 16px; font-weight: 500;"
               ),
+              
               tags$a(
                 href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
                 target = "_blank",
-                "🔗 Add Initiatives and Enrich Data",
-                style = "color: #0c0c0d; text-decoration: none; display: inline-block; margin-top: 15px; padding: 10px;
-                   background-color: #6aff00; border-radius: 10px; font-size: 16px;"
+                icon("plus-square", class = "me-2"),
+                "Suggest New Initiative",
+                style = "color: #000000; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
+                   background-color: #aaff66; border-radius: 12px; font-size: 16px; font-weight: 500;"
               )
             )
           )
-        ),
+        )
+      ),
+      
+        
         
         #-----------------------------
         # VISUAL NAVIGATION CARDS (1)
