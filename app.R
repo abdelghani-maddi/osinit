@@ -262,130 +262,250 @@ ui <- tagList(
 # Dashboard Body
 #===========================
 dashboardBody(
-  id = "tabs",  # Used for tab navigation
-  #===========================
-  # Favicon and Page Title (Browser Tab)
-  #===========================
+  id = "tabs",
+  
   tags$head(
+    # 1. Favicon & page title
     tags$link(rel = "icon", type = "image/png",
               href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
-    tags$title("OS Initiatives Tracker")
-  ),
-  
-  
-  #----------- Custom CSS Styles -----------
-  tags$head(
+    tags$title("OS Initiatives Tracker"),
     
-    # Sidebar hover effects per menu item (child position must match menu order)
+    # 2. All your CSS grouped here
+    # tags$style(HTML("
+    #   /* Sidebar hover effects */
+    #   .sidebar-menu li:nth-child(1) a:hover { background-color: #ba3470 !important; color: white !important; }
+    #   .sidebar-menu li:nth-child(2) a:hover { background-color: #17a2b8 !important; color: white !important; }
+    #   .sidebar-menu li:nth-child(3) a:hover { background-color: #ffc107 !important; color: black !important; }
+    #   .sidebar-menu li:nth-child(4) a:hover { background-color: #8aa728 !important; color: white !important; }
+    #   .sidebar-menu li:nth-child(5) a:hover { background-color: #a72859 !important; color: white !important; }
+    #   .sidebar-menu li:nth-child(6) a:hover { background-color: #288aa7 !important; color: white !important; }
+    #   .sidebar-menu li:nth-child(7) a:hover { background-color: #8aa728 !important; color: white !important; }
+    #   .sidebar-menu li:nth-child(8) a:hover { background-color: #288aa7 !important; color: white !important; }
+    # 
+    #   /* Badges */
+    #   .badge {
+    #     font-size: 13px;
+    #     padding: 6px 10px;
+    #     border-radius: 12px;
+    #     color: white;
+    #     margin-right: 5px;
+    #   }
+    #   .badge-primary { background-color: #007bff; }
+    #   .badge-success { background-color: #28a745; }
+    #   .badge-warning { background-color: #ffc107; color: black; }
+    #   .badge-info    { background-color: #17a2b8; }
+    #   .badge-danger  { background-color: #dc3545; }
+    #   .badge-secondary { background-color: #6c757d; }
+    # 
+    #   /* Buttons */
+    #   .btn-visit {
+    #     background-color: #007bff;
+    #     color: white;
+    #     padding: 5px 12px;
+    #     border-radius: 6px;
+    #     text-decoration: none;
+    #     font-size: 12px;
+    #     transition: background-color 0.3s ease;
+    #   }
+    #   .btn-visit:hover {
+    #     background-color: #0056b3;
+    #     text-decoration: none;
+    #   }
+    # 
+    #   /* Tables */
+    #   .wrap-text {
+    #     white-space: normal !important;
+    #     word-wrap: break-word;
+    #   }
+    #   table.dataTable td {
+    #     vertical-align: middle;
+    #     font-size: 14px;
+    #   }
+    # 
+    #   /* Navigation Cards */
+    #   .section-card {
+    #     border-radius: 16px;
+    #     padding: 30px;
+    #     text-align: center;
+    #     cursor: pointer;
+    #     transition: transform 0.2s, box-shadow 0.2s;
+    #     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    #     margin-bottom: 20px;
+    #   }
+    #   .section-card:hover {
+    #     transform: translateY(-5px);
+    #     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    #   }
+    #   .section-icon {
+    #     font-size: 40px;
+    #     margin-bottom: 15px;
+    #     display: block;
+    #   }
+    #   .section-title {
+    #     font-size: 20px;
+    #     font-weight: bold;
+    #     color: #333;
+    #     margin-bottom: 5px;
+    #   }
+    #   .section-subtitle {
+    #     font-size: 14px;
+    #     color: #666;
+    #   }
+    #   .explore-card    { background-color: #cbe5f3 !important; color: #004d66; }
+    #   .analyze-card    { background-color: #f9e0c2 !important; color: #995c00; }
+    #   .monitor-card    { background-color: #d7ebd7 !important; color: #2e7d32; }
+    #   .contribute-card { background-color: #f2d4e1 !important; color: #880e4f; }
+    #   .dataset-card    { background-color: #e6e6be !important; color: #6d6d00; }
+    #   .about-card      { background-color: #c6d8fc !important; color: #1a237e; }
+    #   .explore-card:hover    { background-color: #d9eef9 !important; }
+    #   .analyze-card:hover    { background-color: #fde8d1 !important; }
+    #   .monitor-card:hover    { background-color: #e4f3e4 !important; }
+    #   .contribute-card:hover { background-color: #f6e1eb !important; }
+    #   .dataset-card:hover    { background-color: #efefcc !important; }
+    #   .about-card:hover      { background-color: #d8e4fc !important; }
+    # 
+    #   /* Advanced Cards with hover menus */
+    #   .interactive-section-box {
+    #     position: relative;
+    #     background: linear-gradient(135deg, #007bff, #00b8d4);
+    #     border-radius: 20px;
+    #     color: white;
+    #     text-align: center;
+    #     padding: 30px 20px;
+    #     margin-bottom: 20px;
+    #     overflow: hidden;
+    #     height: 240px;
+    #     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    #     transition: all 0.3s ease-in-out;
+    #   }
+    #   .section-main .section-icon { font-size: 50px; margin-bottom: 15px; }
+    #   .section-main .section-title { font-size: 20px; font-weight: bold; }
+    #   .section-main .section-subtitle { font-size: 14px; opacity: 0.8; }
+    #   .section-hover-menu {
+    #     position: absolute;
+    #     top: 0; left: 0; right: 0; bottom: 0;
+    #     background-color: rgba(255,255,255,0.95);
+    #     color: #333;
+    #     display: flex;
+    #     flex-direction: column;
+    #     justify-content: center;
+    #     align-items: center;
+    #     opacity: 0;
+    #     transition: opacity 0.3s ease-in-out;
+    #     border-radius: 20px;
+    #     padding: 20px;
+    #   }
+    #   .interactive-section-box:hover .section-hover-menu {
+    #     opacity: 1;
+    #   }
+    #   .btn-explore {
+    #     background-color: #007bff;
+    #     color: white;
+    #     border: none;
+    #     margin: 10px;
+    #     width: 80%;
+    #     padding: 10px;
+    #     border-radius: 8px;
+    #     font-size: 14px;
+    #     transition: background-color 0.3s ease;
+    #   }
+    #   .btn-explore:hover {
+    #     background-color: #0056b3;
+    #   }
+    # "))
     tags$style(HTML("
-      .sidebar-menu li:nth-child(1) a:hover { background-color: #ba3470 !important; color: white !important; }
-      .sidebar-menu li:nth-child(2) a:hover { background-color: #17a2b8 !important; color: white !important; }
-      .sidebar-menu li:nth-child(3) a:hover { background-color: #ffc107 !important; color: black !important; }
-      .sidebar-menu li:nth-child(4) a:hover { background-color: #8aa728 !important; color: white !important; }
-      .sidebar-menu li:nth-child(5) a:hover { background-color: #a72859 !important; color: white !important; }
-      .sidebar-menu li:nth-child(6) a:hover { background-color: #288aa7 !important; color: white !important; }
-      .sidebar-menu li:nth-child(7) a:hover { background-color: #8aa728 !important; color: white !important; }
-      .sidebar-menu li:nth-child(8) a:hover { background-color: #288aa7 !important; color: white !important; }
-    ")),
-    
-    # General badge styling (for colored labels like status tags)
-    tags$style(HTML("
-      .badge {
-        font-size: 13px;
-        padding: 6px 10px;
-        border-radius: 12px;
-        color: white;
-        margin-right: 5px;
-      }
-      .badge-primary { background-color: #007bff; }
-      .badge-success { background-color: #28a745; }
-      .badge-warning { background-color: #ffc107; color: black; }
-      .badge-info    { background-color: #17a2b8; }
-      .badge-danger  { background-color: #dc3545; }
-      .badge-secondary { background-color: #6c757d; }
-    ")),
-    
-    # Button styling (e.g., "Visit" links or dataset access)
-    tags$style(HTML("
-      .btn-visit {
-        background-color: #007bff;
-        color: white;
-        padding: 5px 12px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-size: 12px;
-        transition: background-color 0.3s ease;
-      }
-      .btn-visit:hover {
-        background-color: #0056b3;
-        text-decoration: none;
-      }
-    ")),
-    
-    # Text wrapping and datatable styles
-    tags$style(HTML("
-      .wrap-text {
-        white-space: normal !important;
-        word-wrap: break-word;
-      }
-      table.dataTable td {
-        vertical-align: middle;
-        font-size: 14px;
-      }
-    ")),
-####
-tags$style(HTML("
-  .section-card {
-    border-radius: 16px;
-    padding: 30px;
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-  }
+/* --------- General Styling --------- */
+.interactive-section-box {
+  position: relative;
+  border-radius: 20px;
+  color: white;
+  text-align: center;
+  padding: 30px 20px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  height: 240px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+}
 
-  .section-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-  }
+.section-main .section-icon {
+  font-size: 50px;
+  margin-bottom: 15px;
+}
 
-  .section-icon {
-    font-size: 40px;
-    margin-bottom: 15px;
-    display: block;
-  }
+.section-main .section-title {
+  font-size: 20px;
+  font-weight: bold;
+}
 
-  .section-title {
-    font-size: 20px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 5px;
-  }
+.section-main .section-subtitle {
+  font-size: 14px;
+  opacity: 0.85;
+}
 
-  .section-subtitle {
-    font-size: 14px;
-    color: #666;
-  }
+.section-hover-menu {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255,255,255,0.95);
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  border-radius: 20px;
+  padding: 20px;
+}
 
-  /* Slightly deeper pastel base colors */
-  .explore-card    { background-color: #cbe5f3 !important; color: #004d66; }
-  .analyze-card    { background-color: #f9e0c2 !important; color: #995c00; }
-  .monitor-card    { background-color: #d7ebd7 !important; color: #2e7d32; }
-  .contribute-card { background-color: #f2d4e1 !important; color: #880e4f; }
-  .dataset-card    { background-color: #e6e6be !important; color: #6d6d00; }
-  .about-card      { background-color: #c6d8fc !important; color: #1a237e; }
+.interactive-section-box:hover .section-hover-menu {
+  opacity: 1;
+}
 
-  /* Hover: lighter version for each */
-  .explore-card:hover    { background-color: #d9eef9 !important; }
-  .analyze-card:hover    { background-color: #fde8d1 !important; }
-  .monitor-card:hover    { background-color: #e4f3e4 !important; }
-  .contribute-card:hover { background-color: #f6e1eb !important; }
-  .dataset-card:hover    { background-color: #efefcc !important; }
-  .about-card:hover      { background-color: #d8e4fc !important; }
+/* --------- Theme Backgrounds --------- */
+.explore-box {
+  background: linear-gradient(135deg, #1e88e5, #90caf9);  /* Blue */
+}
+
+.analyze-box {
+  background: linear-gradient(135deg, #f57c00, #ffe0b2);  /* Orange */
+}
+
+.monitor-box {
+  background: linear-gradient(135deg, #43a047, #c8e6c9);  /* Green */
+}
+
+.contribute-box {
+  background: linear-gradient(135deg, #d81b60, #f8bbd0);  /* Pink */
+}
+
+.dataset-box {
+  background: linear-gradient(135deg, #fbc02d, #fff9c4);  /* Yellow */
+}
+
+.about-box {
+  background: linear-gradient(135deg, #5e35b1, #d1c4e9);  /* Purple */
+}
+
+/* --------- Buttons --------- */
+.btn-explore {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  margin: 10px;
+  width: 80%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-explore:hover {
+  background-color: #0056b3;
+}
 "))
-)
- ,
+    
+  ),
   
 
 #--------------------------------------------------
@@ -467,83 +587,231 @@ tabItem(tabName = "overview",
         #-----------------------------
         # VISUAL NAVIGATION CARDS (1)
         #-----------------------------
-        fluidRow(
-          # Explore
-          column(
-            width = 4,
-            div(
-              class = "section-card explore-card",
-              onclick = "Shiny.setInputValue('nav_to', 'by_category')",
-              icon("globe", class = "section-icon"),
-              div(class = "section-title", "Explore Initiatives"),
-              div(class = "section-subtitle", "Map, categories, and countries")
-            )
-          ),
-          
+        # fluidRow(
+        #   # Explore
+        # 
+        #     column(
+        #       width = 4,
+        #       div(
+        #         class = "interactive-section-box",
+        #         tags$div(
+        #           class = "section-main",
+        #           icon("map", class = "section-icon"),
+        #           div(class = "section-title", "Explore Initiatives"),
+        #           div(class = "section-subtitle", "Navigate categories and countries")
+        #         ),
+        #         tags$div(
+        #           class = "section-hover-menu",
+        #           actionButton("go_category", "By Category", class = "btn-explore", 
+        #                        onclick = "Shiny.setInputValue('nav_to', 'by_category')"),
+        #           actionButton("go_country", "By Country / Region", class = "btn-explore", 
+        #                        onclick = "Shiny.setInputValue('nav_to', 'by_country')")
+        #         )
+        #       )
+        #     ),
+        #     
+            
           # Analyze
-          column(
-            width = 4,
-            div(
-              class = "section-card analyze-card",
-              onclick = "Shiny.setInputValue('nav_to', 'mca')",
-              icon("project-diagram", class = "section-icon"),
-              div(class = "section-title", "Analyze Structure"),
-              div(class = "section-subtitle", "MCA and clustering analysis")
-            )
-          ),
+          # 
+          # column(
+          #   width = 4,
+          #   div(
+          #     class = "interactive-section-box",
+          #     tags$div(
+          #       class = "section-main",
+          #       icon("project-diagram", class = "section-icon"),
+          #       div(class = "section-title", "Analyze Structure"),
+          #       div(class = "section-subtitle", "Explore MCA and clustering")
+          #     ),
+          #     tags$div(
+          #       class = "section-hover-menu",
+          #       actionButton("go_mca", "MCA – Correspondence Analysis", class = "btn-explore", 
+          #                    onclick = "Shiny.setInputValue('nav_to', 'mca')"),
+          #       actionButton("go_clustering", "Typology – Clustering", class = "btn-explore", 
+          #                    onclick = "Shiny.setInputValue('nav_to', 'hcpc')")
+          #     )
+          #   )
+          # ),
+          
           
           # Monitor
-          column(
-            width = 4,
-            div(
-              class = "section-card monitor-card",
-              onclick = "Shiny.setInputValue('nav_to', 'principles')",
-              icon("balance-scale", class = "section-icon"),
-              div(class = "section-title", "Monitoring Framework"),
-              div(class = "section-subtitle", "OSMI principles and landscape overview")
+        # column(
+        #   width = 4,
+        #   div(
+        #     class = "interactive-section-box",
+        #     tags$div(
+        #       class = "section-main",
+        #       icon("balance-scale", class = "section-icon"),
+        #       div(class = "section-title", "Monitoring Framework"),
+        #       div(class = "section-subtitle", "Principles and global landscape")
+        #     ),
+        #     tags$div(
+        #       class = "section-hover-menu",
+        #       actionButton("go_principles", "OSMI Principles", class = "btn-explore", 
+        #                    onclick = "Shiny.setInputValue('nav_to', 'principles')"),
+        #       actionButton("go_monitoring", "Monitoring Landscape", class = "btn-explore", 
+        #                    onclick = "Shiny.setInputValue('nav_to', 'monitoring')")
+        #     )
+        #   )
+        # )
+        
+        # ),
+      fluidRow(
+        # EXPLORE BOX
+        column(
+          width = 4,
+          div(
+            class = "interactive-section-box explore-box section-main",
+            tags$i(class = "fas fa-map-marked-alt section-icon"),
+            div(class = "section-title", "Explore Initiatives"),
+            div(class = "section-subtitle", "By country, map, category"),
+            div(class = "section-hover-menu",
+                actionButton("goto_by_country", "By Country / Region", class = "btn-explore"),
+                actionButton("goto_by_category", "By Category", class = "btn-explore")
             )
           )
         ),
+        
+        # ANALYZE BOX
+        column(
+          width = 4,
+          div(
+            class = "interactive-section-box analyze-box section-main",
+            tags$i(class = "fas fa-project-diagram section-icon"),
+            div(class = "section-title", "Analyze Structure"),
+            div(class = "section-subtitle", "MCA and clustering"),
+            div(class = "section-hover-menu",
+                actionButton("goto_mca", "Correspondence Analysis", class = "btn-explore"),
+                actionButton("goto_hcpc", "Typology – Clustering", class = "btn-explore")
+            )
+          )
+        ),
+        
+        # MONITOR BOX
+        column(
+          width = 4,
+          div(
+            class = "interactive-section-box monitor-box section-main",
+            tags$i(class = "fas fa-balance-scale section-icon"),
+            div(class = "section-title", "Monitoring Framework"),
+            div(class = "section-subtitle", "OSMI Principles & Landscape"),
+            div(class = "section-hover-menu",
+                actionButton("goto_principles", "OSMI Principles", class = "btn-explore"),
+                actionButton("goto_monitoring", "Monitoring Landscape", class = "btn-explore")
+            )
+          )
+        )
+      ),
+      
         
         #-----------------------------
         # VISUAL NAVIGATION CARDS (2)
         #-----------------------------
         fluidRow(
           # Contribute
+          # column(
+          #   width = 4,
+          #   div(
+          #     class = "interactive-section-box",
+          #     tags$div(
+          #       class = "section-main",
+          #       icon("plus-circle", class = "section-icon"),
+          #       div(class = "section-title", "Contribute"),
+          #       div(class = "section-subtitle", "Suggest or edit initiatives")
+          #     ),
+          #     tags$div(
+          #       class = "section-hover-menu",
+          #       actionButton("go_add", "Suggest Initiative", class = "btn-explore", 
+          #                    onclick = "Shiny.setInputValue('nav_to', 'add_initiative')")
+          #     )
+          #   )
+          # ),
           column(
             width = 4,
             div(
-              class = "section-card contribute-card",
-              onclick = "Shiny.setInputValue('nav_to', 'add_initiative')",
-              icon("plus-circle", class = "section-icon"),
+              class = "interactive-section-box contribute-box section-main",
+              tags$i(class = "fas fa-plus-circle section-icon"),
               div(class = "section-title", "Contribute"),
-              div(class = "section-subtitle", "Suggest or edit initiatives")
+              div(class = "section-subtitle", "Add or enrich initiatives"),
+              div(class = "section-hover-menu",
+                  actionButton("goto_add_initiative", "Suggest Initiative", class = "btn-explore")
+              )
             )
           ),
+          
+          
           
           # Dataset
+         
+          # column(
+          #   width = 4,
+          #   div(
+          #     class = "interactive-section-box",
+          #     tags$div(
+          #       class = "section-main",
+          #       icon("database", class = "section-icon"),
+          #       div(class = "section-title", "Dataset"),
+          #       div(class = "section-subtitle", "View or download data")
+          #     ),
+          #     tags$div(
+          #       class = "section-hover-menu",
+          #       actionButton("go_dataset", "Download Dataset", class = "btn-explore", 
+          #                    onclick = "Shiny.setInputValue('nav_to', 'download_data')")
+          #     )
+          #   )
+          # ),
           column(
             width = 4,
             div(
-              class = "section-card dataset-card",
-              onclick = "Shiny.setInputValue('nav_to', 'download_data')",
-              icon("table", class = "section-icon"),
+              class = "interactive-section-box dataset-box section-main",
+              tags$i(class = "fas fa-database section-icon"),
               div(class = "section-title", "Dataset Access"),
-              div(class = "section-subtitle", "View or download data")
+              div(class = "section-subtitle", "View or download the full dataset"),
+              div(class = "section-hover-menu",
+                  actionButton("goto_download_data", "Access Dataset", class = "btn-explore")
+              )
             )
           ),
           
+          
+          
           # About
+
+          # column(
+          #   width = 4,
+          #   div(
+          #     class = "interactive-section-box",
+          #     tags$div(
+          #       class = "section-main",
+          #       icon("info-circle", class = "section-icon"),
+          #       div(class = "section-title", "About"),
+          #       div(class = "section-subtitle", "Project and contributors")
+          #     ),
+          #     tags$div(
+          #       class = "section-hover-menu",
+          #       actionButton("go_about", "About the Project", class = "btn-explore", 
+          #                    onclick = "Shiny.setInputValue('nav_to', 'about')"),
+          #       actionButton("go_faq", "FAQs", class = "btn-explore", 
+          #                    onclick = "Shiny.setInputValue('nav_to', 'FAQs')")
+          #     )
+          #   )
+          # )
           column(
             width = 4,
             div(
-              class = "section-card about-card",
-              onclick = "Shiny.setInputValue('nav_to', 'about')",
-              icon("info-circle", class = "section-icon"),
+              class = "interactive-section-box about-box section-main",
+              tags$i(class = "fas fa-info-circle section-icon"),
               div(class = "section-title", "About"),
-              div(class = "section-subtitle", "Project and contributors")
+              div(class = "section-subtitle", "Project description and FAQs"),
+              div(class = "section-hover-menu",
+                  actionButton("goto_about", "About the Project", class = "btn-explore"),
+                  actionButton("goto_faqs", "FAQs", class = "btn-explore")
+              )
             )
           )
+          
+          
+          
         )),
 
 
@@ -1187,11 +1455,41 @@ tabItem(tabName = "by_country",
 server <- function(input, output, session) {
   
   
-  observe({
-    print(paste0("nav_to: ", input$nav_to))
+  # observe({
+  #   print(paste0("nav_to: ", input$nav_to))
+  # })
+  # observeEvent(input$nav_to, {
+  #   updateTabItems(session, "tabs", selected = input$nav_to)
+  # })
+  observeEvent(input$goto_by_category, {
+    updateTabItems(session, "tabs", "by_category")
   })
-  observeEvent(input$nav_to, {
-    updateTabItems(session, "tabs", selected = input$nav_to)
+  observeEvent(input$goto_by_country, {
+    updateTabItems(session, "tabs", "by_country")
+  })
+  observeEvent(input$goto_mca, {
+    updateTabItems(session, "tabs", "mca")
+  })
+  observeEvent(input$goto_hcpc, {
+    updateTabItems(session, "tabs", "hcpc")
+  })
+  observeEvent(input$goto_principles, {
+    updateTabItems(session, "tabs", "principles")
+  })
+  observeEvent(input$goto_monitoring, {
+    updateTabItems(session, "tabs", "monitoring")
+  })
+  observeEvent(input$goto_add_initiative, {
+    updateTabItems(session, "tabs", "add_initiative")
+  })
+  observeEvent(input$goto_download_data, {
+    updateTabItems(session, "tabs", "download_data")
+  })
+  observeEvent(input$goto_about, {
+    updateTabItems(session, "tabs", "about")
+  })
+  observeEvent(input$goto_faqs, {
+    updateTabItems(session, "tabs", "FAQs")
   })
   
   
