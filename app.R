@@ -549,7 +549,24 @@ dashboardBody(
   .badge-info      { background-color: #17a2b8; }
   .badge-danger    { background-color: #dc3545; }
   .badge-secondary { background-color: #6c757d; }
+")),
+    
+    tags$style(HTML("
+  .wrap-text {
+    white-space: normal !important;
+    word-wrap: break-word;
+  }
+
+  table.dataTable td {
+    vertical-align: top;
+    font-size: 14px;
+    white-space: normal !important;
+    word-break: break-word;
+    line-height: 1.4;
+  }
 "))
+    
+    
     
   ),
   
@@ -1751,55 +1768,165 @@ server <- function(input, output, session) {
     cat("✅ Clusters updated in Google Sheet.\n")
   })
   
-  #############################
+  # #############################
+  # output$monitoring_table <- DT::renderDataTable({
+  #   df <- monitoring_data()
+  # 
+  #   # Lien cliquable avec icône
+  #   df$Link <- ifelse(
+  #     is.na(df$Link) | df$Link == "",
+  #     "",
+  #     paste0("<a href='", df$Link, "' target='_blank'><i class='fa fa-external-link-alt'></i> Visit</a>")
+  #   )
+  # 
+  #   # Badges de type
+  #   df$Type <- case_when(
+  #     df$Type == "National" ~ "<span class='badge badge-primary'>National</span>",
+  #     df$Type == "International" ~ "<span class='badge badge-success'>International</span>",
+  #     df$Type == "Funder" ~ "<span class='badge badge-warning'>Funder</span>",
+  #     df$Type == "Institutional" ~ "<span class='badge badge-info'>Institution</span>",
+  #     df$Type == "Publisher" ~ "<span class='badge badge-danger'>Publisher</span>",
+  #     df$Type == "Specialised" ~ "<span class='badge badge-secondary'>Specialised</span>",
+  #     TRUE ~ as.character(df$Type)
+  #   )
+  # 
+  #   DT::datatable(
+  #     df,
+  #     escape = FALSE,
+  #     rownames = FALSE,
+  #     options = list(
+  #       pageLength = 10,
+  #       autoWidth = TRUE,
+  #       dom = 'Bfrtip',
+  #       buttons = c('copy', 'csv', 'excel'),
+  #       columnDefs = list(
+  #         list(className = 'dt-center', targets = "_all"),
+  #         list(width = '25%', targets = 0),  # Initiative
+  #         list(width = '20%', targets = 1),  # Type
+  #         list(width = '20%', targets = 2),  # Link
+  #         list(width = '55%', targets = 3)   # Description
+  #       )
+  #     ),
+  #     #class = 'cell-border stripe hover nowrap'
+  #     class = 'display nowrap compact stripe'
+  #   )
+  # })
+  # 
+  # # #################################################
+  # #################################################
+  # output$focus_table <- DT::renderDataTable({
+  #   df <- df_focus()
+  #   
+  #   # Drapeaux sous forme d’image
+  #   df$`Country/Region` <- ifelse(
+  #     is.na(df$Flag) | df$Flag == "",
+  #     df$`Country/Region`,
+  #     paste0("<img src='", df$Flag, "' width='24' style='margin-right:6px;'>", df$`Country/Region`)
+  #   )
+  #   
+  #   # Lien stylisé
+  #   df$Link <- ifelse(
+  #     is.na(df$Link) | df$Link == "",
+  #     "",
+  #     paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
+  #   )
+  #   
+  #   df <- df %>% select(Initiative, `Country/Region`, Group, Type, Description, Link)
+  #   
+  #   df$Type <- dplyr::case_when(
+  #     df$Type == "National policy" ~ "<span class='badge badge-primary'>National policy</span>",
+  #     df$Type == "National dashboard" ~ "<span class='badge badge-info'>National dashboard</span>",
+  #     df$Type == "Funding / Coordination" ~ "<span class='badge badge-success'>Funding</span>",
+  #     df$Type == "Funding programme" ~ "<span class='badge badge-success'>Funding</span>",
+  #     df$Type == "Infrastructure" ~ "<span class='badge badge-dark'>Infrastructure</span>",
+  #     df$Type == "Information system" ~ "<span class='badge badge-warning'>Info system</span>",
+  #     df$Type == "National programme" ~ "<span class='badge badge-primary'>Programme</span>",
+  #     df$Type == "International initiative" ~ "<span class='badge badge-secondary'>International</span>",
+  #     df$Type == "Publication platform" ~ "<span class='badge badge-purple'>Platform</span>",
+  #     df$Type == "Monitoring" ~ "<span class='badge badge-danger'>Monitoring</span>",
+  #     TRUE ~ as.character(df$Type)
+  #   )
+  #   
+  #   
+  #   DT::datatable(
+  #     df,
+  #     escape = FALSE,
+  #     rownames = FALSE,
+  #     extensions = 'Responsive',
+  #     options = list(
+  #       pageLength = 10,
+  #       autoWidth = TRUE,
+  #       responsive = TRUE,
+  #       columnDefs = list(
+  #         list(className = 'dt-left', targets = "_all"),
+  #         list(width = '10%', targets = 0),
+  #         list(width = '10%', targets = 1),
+  #         list(width = '10%', targets = 2),
+  #         list(width = '15%', targets = 3),
+  #         list(width = '40%', targets = 4, className = 'wrap-text'),
+  #         list(width = '10%', targets = 5)
+  #       )
+  #     ),
+  #     class = 'display nowrap compact stripe'
+  #   )
+  # }) 
+
+  # Palette pastel pour badges
+  generate_color_palette <- function(n) {
+    hues <- seq(15, 375, length = n + 1)
+    grDevices::hcl(h = hues, l = 65, c = 100)[1:n]
+  }
+  
+  # Fonction pour colorer automatiquement les catégories de type
+  create_colored_badge_column <- function(type_vector) {
+    unique_types <- unique(type_vector)
+    colors <- generate_color_palette(length(unique_types))
+    names(colors) <- unique_types
+    badges <- paste0("<span class='badge' style='background-color:", colors[type_vector], ";'>", type_vector, "</span>")
+    return(badges)
+  }
+  
+  
   output$monitoring_table <- DT::renderDataTable({
     df <- monitoring_data()
     
-    # Lien cliquable avec icône
+    # Lien stylisé
     df$Link <- ifelse(
       is.na(df$Link) | df$Link == "",
       "",
-      paste0("<a href='", df$Link, "' target='_blank'><i class='fa fa-external-link-alt'></i> Visit</a>")
+      paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
     )
     
-    # Badges de type
-    df$Type <- case_when(
-      df$Type == "National" ~ "<span class='badge badge-primary'>National</span>",
-      df$Type == "International" ~ "<span class='badge badge-success'>International</span>",
-      df$Type == "Funder" ~ "<span class='badge badge-warning'>Funder</span>",
-      df$Type == "Institutional" ~ "<span class='badge badge-info'>Institution</span>",
-      df$Type == "Publisher" ~ "<span class='badge badge-danger'>Publisher</span>",
-      df$Type == "Specialised" ~ "<span class='badge badge-secondary'>Specialised</span>",
-      TRUE ~ as.character(df$Type)
-    )
+    # Color badge automatique
+    df$Type <- create_colored_badge_column(df$Type)
     
+    # Datatable
     DT::datatable(
-      df,
+      df %>% select(Initiative, Type, Link, Description),
       escape = FALSE,
       rownames = FALSE,
+      extensions = c('Buttons', 'Scroller'),
       options = list(
         pageLength = 10,
-        autoWidth = TRUE,
+        scrollX = TRUE,
         dom = 'Bfrtip',
         buttons = c('copy', 'csv', 'excel'),
         columnDefs = list(
-          list(className = 'dt-center', targets = "_all"),
-          list(width = '25%', targets = 0),  # Initiative
-          list(width = '10%', targets = 1),  # Type
-          list(width = '10%', targets = 2),  # Link
-          list(width = '55%', targets = 3)   # Description
+          list(className = 'dt-left', targets = "_all"),
+          list(width = '25%', targets = 0),
+          list(width = '15%', targets = 1),
+          list(width = '10%', targets = 2),
+          list(width = '50%', targets = 3, className = 'wrap-text')
         )
       ),
-      #class = 'cell-border stripe hover nowrap' 
       class = 'display nowrap compact stripe'
     )
   })
   
-  #################################################
   output$focus_table <- DT::renderDataTable({
     df <- df_focus()
     
-    # Drapeaux sous forme d’image
+    # Drapeau dans pays
     df$`Country/Region` <- ifelse(
       is.na(df$Flag) | df$Flag == "",
       df$`Country/Region`,
@@ -1813,45 +1940,35 @@ server <- function(input, output, session) {
       paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
     )
     
-    df <- df %>% select(Initiative, `Country/Region`, Group, Type, Description, Link)
+    # Badge coloré dynamique
+    df$Type <- create_colored_badge_column(df$Type)
     
-    df$Type <- dplyr::case_when(
-      df$Type == "National policy" ~ "<span class='badge badge-primary'>National policy</span>",
-      df$Type == "National dashboard" ~ "<span class='badge badge-info'>National dashboard</span>",
-      df$Type == "Funding / Coordination" ~ "<span class='badge badge-success'>Funding</span>",
-      df$Type == "Funding programme" ~ "<span class='badge badge-success'>Funding</span>",
-      df$Type == "Infrastructure" ~ "<span class='badge badge-dark'>Infrastructure</span>",
-      df$Type == "Information system" ~ "<span class='badge badge-warning'>Info system</span>",
-      df$Type == "National programme" ~ "<span class='badge badge-primary'>Programme</span>",
-      df$Type == "International initiative" ~ "<span class='badge badge-secondary'>International</span>",
-      df$Type == "Publication platform" ~ "<span class='badge badge-purple'>Platform</span>",
-      df$Type == "Monitoring" ~ "<span class='badge badge-danger'>Monitoring</span>",
-      TRUE ~ as.character(df$Type)
-    )
-    
-    
+    # Affichage table
     DT::datatable(
-      df,
+      df %>% select(Initiative, `Country/Region`, Group, Type, Description, Link),
       escape = FALSE,
       rownames = FALSE,
-      extensions = 'Responsive',
+      extensions = c('Buttons', 'Scroller'),
       options = list(
         pageLength = 10,
-        autoWidth = TRUE,
-        responsive = TRUE,
+        scrollX = TRUE,
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel'),
         columnDefs = list(
           list(className = 'dt-left', targets = "_all"),
-          list(width = '10%', targets = 0),
-          list(width = '10%', targets = 1),
+          list(width = '15%', targets = 0),
+          list(width = '15%', targets = 1),
           list(width = '10%', targets = 2),
           list(width = '15%', targets = 3),
-          list(width = '40%', targets = 4, className = 'wrap-text'),
+          list(width = '35%', targets = 4, className = 'wrap-text'),
           list(width = '10%', targets = 5)
         )
       ),
       class = 'display nowrap compact stripe'
     )
-  }) 
+  })
+  
+  
 }
 
 
