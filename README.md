@@ -1,6 +1,6 @@
-# 🌍 Open Science Initiatives Dashboard
+# 🌍 Open Science Initiatives Tracker - OSINIT
 
-**Open Science Initiatives Dashboard** is a web application designed to visualize, explore, and analyze global open science initiatives.  
+**Open Science Initiatives Tracker** is a web application designed to visualize, explore, and analyze global open science initiatives.  
 This dashboard integrates interactive maps, charts, and statistical analyses to help researchers, policymakers, and communities understand the distribution, categories, governance models, and collaborative networks behind open science projects worldwide.
 
 ---
@@ -123,5 +123,6 @@ New initiatives can be proposed via the public form:
 ---
 
 ## 📄 License
+
 
 CCBY - 4.0
