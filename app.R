@@ -4,7 +4,7 @@
 rm(list = ls())  # Removes all variables from the workspace
 
 #######################
-# Load necessary libraries
+# Load necessary libraries -----
 #######################
 library(shiny)  # For creating web applications
 library(shinydashboard)  # For dashboard UI components
@@ -30,11 +30,8 @@ library(shinyWidgets)
 library(bslib)
 library(colorspace)
 
-# library(esquisse)
-
-
 #######################
-# Set up Shiny app credentials
+# Set up Shiny app credentials -----
 #######################
 # Authenticate with Shiny server using account credentials stored in environment variables
 library(rsconnect)
@@ -161,18 +158,24 @@ df_focus <- function() {
   read_sheet("https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo", sheet = "Focus")
 }
 
+
 # ================================================
-# User Interface - Open Science Initiatives Dashboard
+# User Interface - Open Science Initiatives Dashboard ----
 # ================================================
 
-# ui <- dashboardPage(
-  
 ui <- tagList(
-    tags$head(
-      tags$link(rel = "icon", type = "image/png", href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
-      tags$title("OS Initiatives Tracker"),
-      
-      tags$style(HTML("
+  
+  #===========================
+  # HEAD TAGS: Metadata, favicon, and sidebar hover styles
+  #===========================
+  tags$head(
+    # Set favicon and page title
+    tags$link(rel = "icon", type = "image/png", 
+              href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
+    tags$title("OS Initiatives Tracker"),
+    
+    # Custom hover color styles for each sidebar menu item
+    tags$style(HTML("
       .sidebar-menu li:nth-child(1) a:hover { background-color: #ba3470 !important; color: white !important; }
       .sidebar-menu li:nth-child(2) a:hover { background-color: #17a2b8 !important; color: white !important; }
       .sidebar-menu li:nth-child(3) a:hover { background-color: #ffc107 !important; color: black !important; }
@@ -182,693 +185,533 @@ ui <- tagList(
       .sidebar-menu li:nth-child(7) a:hover { background-color: #8aa728 !important; color: white !important; }
       .sidebar-menu li:nth-child(8) a:hover { background-color: #288aa7 !important; color: white !important; }
     "))
-    ),
-    dashboardPage(    
-  #===========================
-  # Header with Title
-  #===========================
-  dashboardHeader(
-    title = tags$strong("Open Science Initiatives Tracker"),
-    titleWidth = 500 # ,
-
-    # # External Logos in Header (aligned right)
-    # tags$li(
-    #   class = "dropdown",
-    #   tags$a(href = "https://open-science-monitoring.org/", target = "_blank",
-    #          tags$img(src = "logo-osmi.png", height = "30px",
-    #                   style = "padding: 5px;"))
-    # ),
-    # tags$li(
-    #   class = "dropdown",
-    #   tags$a(href = "https://www.gemass.fr/contract/openit/", target = "_blank",
-    #          tags$img(src = "logo.png", height = "30px",
-    #                   style = "padding: 5px;"))
-    # )
   ),
   
   #===========================
-  # Sidebar Navigation Menu
+  # DASHBOARD LAYOUT
   #===========================
-  dashboardSidebar(
-    sidebarMenu(
-      id = "tabs",  # Used for tab navigation
-      # 1. Introduction Section
-      menuItem(" Global overview", tabName = "overview", icon = icon("globe")),
+  dashboardPage(    
+    
+    #===========================
+    # HEADER with App Title + Overview Button
+    #===========================
+    dashboardHeader(
+      title = tags$strong("Open Science Initiatives Tracker"),
+      titleWidth = 500,
       
-      # 2. Exploration Section
-      menuItem("Explore Initiatives", icon = icon("map"),
-               menuSubItem("By Category", tabName = "by_category"),
-               menuSubItem("By Country / Region", tabName = "by_country")
-      ),
-      
-      # 3. Analytical Insights Section
-      menuItem("Analytical Insights", icon = icon("project-diagram"),
-               menuSubItem("MCA – Correspondence Analysis", tabName = "mca"),
-               menuSubItem("Typology – Clustering", tabName = "hcpc")
-      ),
-      
-      # 4. Monitoring Framework Section
-      menuItem("Monitoring Framework", icon = icon("balance-scale"),
-               menuSubItem("OSMI Principles", tabName = "principles"),
-               menuSubItem("Monitoring Landscape", tabName = "monitoring")
-      ),
-      
-      # 5. Community Contributions & Data
-      menuItem("Contribute & Data", icon = icon("users"),
-               menuSubItem("Suggest Initiative", tabName = "add_initiative"),
-               menuSubItem("Download Dataset", tabName = "download_data"),
-               menuSubItem("Source Code (GitHub)", 
-                           href = "https://github.com/abdelghani-maddi/osinit", 
-                           newtab = TRUE)
-      ),
-      
-      # 6. Project Resources
-      menuItem("Resources", icon = icon("book"),
-               menuSubItem("About the Project", tabName = "about"),
-               menuSubItem("FAQs", tabName = "FAQs")
-      ),
-      
-      # 7. Logos & External Links
-      # tags$li(class = "dropdown", 
-      #         tags$a(href = "https://open-science-monitoring.org/", 
-      #                target = "_blank", 
-      #                tags$img(
-      #                  src = "logo-osmi.png", 
-      #                  height = "40px", 
-      #                  style = "margin: 0px 0 0px 0px; display: block;"
-      #                )
-      #         )
-      # ),
-      
-      tags$li(class = "dropdown", 
-              tags$a(href = "https://www.gemass.fr/contract/openit/", 
-                     target = "_blank", 
-                     tags$img(
-                       src = "logo.png", 
-                       height = "45px", 
-                       style = "margin: 0px 0 0px 0px; display: block;"
-                     )
-              )
-      ),
-      
-  # 8. ANR logo fixed at the bottom of the sidebar
-  tags$div(
-    style = "position: absolute; bottom: 20px; left: 10px;",
-    tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
-           tags$img(src = "logo_ANR.jpg", height = "33px", style = "margin: 5px; display: block;")
+      # Navigation button: Overview
+      tags$li(
+        class = "dropdown",
+        actionButton(
+          inputId = "go_overview",
+          label = tagList(icon("home"), "Overview"),
+          class = "btn btn-outline-light",
+          style = "margin-top: 8px; margin-right: 12px; padding: 4px 8px; font-size: 13px;"
+        )
+      )
     ),
-    tags$a(href = "https://creativecommons.org/licenses/by/4.0/deed.fr", target = "_blank",
-           tags$img(src = "CC_BY.png", height = "30px", style = "margin: 5px; display: block;")
-    )
-  )
-  
-    )
-),
-  
-
-
-#===========================
-# Dashboard Body
-#===========================
-dashboardBody(
-  id = "tabs",
-  
-  tags$head(
-    # 1. Favicon & page title
-    tags$link(rel = "icon", type = "image/png",
-              href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
-    tags$title("OS Initiatives Tracker"),
     
-    # 2. All your CSS grouped here
-    # tags$style(HTML("
-    #   /* Sidebar hover effects */
-    #   .sidebar-menu li:nth-child(1) a:hover { background-color: #ba3470 !important; color: white !important; }
-    #   .sidebar-menu li:nth-child(2) a:hover { background-color: #17a2b8 !important; color: white !important; }
-    #   .sidebar-menu li:nth-child(3) a:hover { background-color: #ffc107 !important; color: black !important; }
-    #   .sidebar-menu li:nth-child(4) a:hover { background-color: #8aa728 !important; color: white !important; }
-    #   .sidebar-menu li:nth-child(5) a:hover { background-color: #a72859 !important; color: white !important; }
-    #   .sidebar-menu li:nth-child(6) a:hover { background-color: #288aa7 !important; color: white !important; }
-    #   .sidebar-menu li:nth-child(7) a:hover { background-color: #8aa728 !important; color: white !important; }
-    #   .sidebar-menu li:nth-child(8) a:hover { background-color: #288aa7 !important; color: white !important; }
-    # 
-    #   /* Badges */
-    #   .badge {
-    #     font-size: 13px;
-    #     padding: 6px 10px;
-    #     border-radius: 12px;
-    #     color: white;
-    #     margin-right: 5px;
-    #   }
-    #   .badge-primary { background-color: #007bff; }
-    #   .badge-success { background-color: #28a745; }
-    #   .badge-warning { background-color: #ffc107; color: black; }
-    #   .badge-info    { background-color: #17a2b8; }
-    #   .badge-danger  { background-color: #dc3545; }
-    #   .badge-secondary { background-color: #6c757d; }
-    # 
-    #   /* Buttons */
-    #   .btn-visit {
-    #     background-color: #007bff;
-    #     color: white;
-    #     padding: 5px 12px;
-    #     border-radius: 6px;
-    #     text-decoration: none;
-    #     font-size: 12px;
-    #     transition: background-color 0.3s ease;
-    #   }
-    #   .btn-visit:hover {
-    #     background-color: #0056b3;
-    #     text-decoration: none;
-    #   }
-    # 
-    #   /* Tables */
-    #   .wrap-text {
-    #     white-space: normal !important;
-    #     word-wrap: break-word;
-    #   }
-    #   table.dataTable td {
-    #     vertical-align: middle;
-    #     font-size: 14px;
-    #   }
-    # 
-    #   /* Navigation Cards */
-    #   .section-card {
-    #     border-radius: 16px;
-    #     padding: 30px;
-    #     text-align: center;
-    #     cursor: pointer;
-    #     transition: transform 0.2s, box-shadow 0.2s;
-    #     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    #     margin-bottom: 20px;
-    #   }
-    #   .section-card:hover {
-    #     transform: translateY(-5px);
-    #     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    #   }
-    #   .section-icon {
-    #     font-size: 40px;
-    #     margin-bottom: 15px;
-    #     display: block;
-    #   }
-    #   .section-title {
-    #     font-size: 20px;
-    #     font-weight: bold;
-    #     color: #333;
-    #     margin-bottom: 5px;
-    #   }
-    #   .section-subtitle {
-    #     font-size: 14px;
-    #     color: #666;
-    #   }
-    #   .explore-card    { background-color: #cbe5f3 !important; color: #004d66; }
-    #   .analyze-card    { background-color: #f9e0c2 !important; color: #995c00; }
-    #   .monitor-card    { background-color: #d7ebd7 !important; color: #2e7d32; }
-    #   .contribute-card { background-color: #f2d4e1 !important; color: #880e4f; }
-    #   .dataset-card    { background-color: #e6e6be !important; color: #6d6d00; }
-    #   .about-card      { background-color: #c6d8fc !important; color: #1a237e; }
-    #   .explore-card:hover    { background-color: #d9eef9 !important; }
-    #   .analyze-card:hover    { background-color: #fde8d1 !important; }
-    #   .monitor-card:hover    { background-color: #e4f3e4 !important; }
-    #   .contribute-card:hover { background-color: #f6e1eb !important; }
-    #   .dataset-card:hover    { background-color: #efefcc !important; }
-    #   .about-card:hover      { background-color: #d8e4fc !important; }
-    # 
-    #   /* Advanced Cards with hover menus */
-    #   .interactive-section-box {
-    #     position: relative;
-    #     background: linear-gradient(135deg, #007bff, #00b8d4);
-    #     border-radius: 20px;
-    #     color: white;
-    #     text-align: center;
-    #     padding: 30px 20px;
-    #     margin-bottom: 20px;
-    #     overflow: hidden;
-    #     height: 240px;
-    #     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-    #     transition: all 0.3s ease-in-out;
-    #   }
-    #   .section-main .section-icon { font-size: 50px; margin-bottom: 15px; }
-    #   .section-main .section-title { font-size: 20px; font-weight: bold; }
-    #   .section-main .section-subtitle { font-size: 14px; opacity: 0.8; }
-    #   .section-hover-menu {
-    #     position: absolute;
-    #     top: 0; left: 0; right: 0; bottom: 0;
-    #     background-color: rgba(255,255,255,0.95);
-    #     color: #333;
-    #     display: flex;
-    #     flex-direction: column;
-    #     justify-content: center;
-    #     align-items: center;
-    #     opacity: 0;
-    #     transition: opacity 0.3s ease-in-out;
-    #     border-radius: 20px;
-    #     padding: 20px;
-    #   }
-    #   .interactive-section-box:hover .section-hover-menu {
-    #     opacity: 1;
-    #   }
-    #   .btn-explore {
-    #     background-color: #007bff;
-    #     color: white;
-    #     border: none;
-    #     margin: 10px;
-    #     width: 80%;
-    #     padding: 10px;
-    #     border-radius: 8px;
-    #     font-size: 14px;
-    #     transition: background-color 0.3s ease;
-    #   }
-    #   .btn-explore:hover {
-    #     background-color: #0056b3;
-    #   }
-    # "))
-    tags$style(HTML("
-/* --------- General Styling --------- */
-.interactive-section-box {
-  position: relative;
-  border-radius: 20px;
-  color: white;
-  text-align: center;
-  padding: 30px 20px;
-  margin-bottom: 20px;
-  overflow: hidden;
-  height: 240px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease-in-out;
-}
-
-.section-main .section-icon {
-  font-size: 50px;
-  margin-bottom: 15px;
-}
-
-.section-main .section-title {
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.section-main .section-subtitle {
-  font-size: 14px;
-  opacity: 0.85;
-}
-
-.section-hover-menu {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(255,255,255,0.95);
-  color: #333;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-  border-radius: 20px;
-  padding: 20px;
-}
-
-.interactive-section-box:hover .section-hover-menu {
-  opacity: 1;
-}
-
-/* --------- Theme Backgrounds --------- */
-.explore-box {
-  background: linear-gradient(135deg, #1e88e5, #90caf9);  /* Blue */
-}
-
-.analyze-box {
-  background: linear-gradient(135deg, #f57c00, #ffe0b2);  /* Orange */
-}
-
-.monitor-box {
-  background: linear-gradient(135deg, #43a047, #c8e6c9);  /* Green */
-}
-
-.contribute-box {
-  background: linear-gradient(135deg, #d81b60, #f8bbd0);  /* Pink */
-}
-
-.dataset-box {
-  background: linear-gradient(135deg, #fbc02d, #fff9c4);  /* Yellow */
-}
-
-.about-box {
-  background: linear-gradient(135deg, #5e35b1, #d1c4e9);  /* Purple */
-}
-
-/* --------- Buttons --------- */
-.btn-explore {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  margin: 10px;
-  width: 80%;
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
-}
-
-.btn-explore:hover {
-  background-color: #0056b3;
-}
-")),
+    #===========================
+    # SIDEBAR MENU
+    #===========================
+    dashboardSidebar(
+      sidebarMenu(
+        id = "tabs",  # Tab navigation identifier
+        
+        # 1. Global Overview
+        menuItem(" Global overview", tabName = "overview", icon = icon("globe")),
+        
+        # 2. Explore Section
+        menuItem("Explore Initiatives", icon = icon("map"),
+                 menuSubItem("By Category", tabName = "by_category"),
+                 menuSubItem("By Country / Region", tabName = "by_country")
+        ),
+        
+        # 3. Analytical Section
+        menuItem("Analytical Insights", icon = icon("project-diagram"),
+                 menuSubItem("MCA – Correspondence Analysis", tabName = "mca"),
+                 menuSubItem("Typology – Clustering", tabName = "hcpc")
+        ),
+        
+        # 4. Monitoring Section
+        menuItem("Monitoring Framework", icon = icon("balance-scale"),
+                 menuSubItem("OSMI Principles", tabName = "principles"),
+                 menuSubItem("Monitoring Landscape", tabName = "monitoring")
+        ),
+        
+        # 5. Contribution & Data
+        menuItem("Contribute & Data", icon = icon("users"),
+                 menuSubItem("Suggest Initiative", tabName = "add_initiative"),
+                 menuSubItem("Download Dataset", tabName = "download_data"),
+                 menuSubItem("Source Code (GitHub)", 
+                             href = "https://github.com/abdelghani-maddi/osinit", 
+                             newtab = TRUE)
+        ),
+        
+        # 6. Resources
+        menuItem("Resources", icon = icon("book"),
+                 menuSubItem("About the Project", tabName = "about"),
+                 menuSubItem("FAQs", tabName = "FAQs")
+        ),
+        
+        # 7. Logos (external links)
+        tags$li(class = "dropdown", 
+                tags$a(href = "https://www.gemass.fr/contract/openit/", target = "_blank",
+                       tags$img(src = "logo.png", height = "47px", style = "margin: 0px; display: block;")
+                )
+        ),
+        tags$li(class = "dropdown", 
+                tags$a(href = "https://open-science-monitoring.org/", target = "_blank",
+                       tags$img(src = "osmi.png", height = "44px", style = "margin: 0px; display: block;")
+                )
+        ),
+        
+        # 8. Logos fixed to bottom of sidebar (ANR + CC-BY)
+        tags$div(
+          style = "position: absolute; bottom: 20px; left: 10px;",
+          tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
+                 tags$img(src = "logo_ANR.jpg", height = "33px", style = "margin: 5px; display: block;")
+          ),
+          tags$a(href = "https://creativecommons.org/licenses/by/4.0/deed.fr", target = "_blank",
+                 tags$img(src = "CC_BY.png", height = "30px", style = "margin: 5px; display: block;")
+          )
+        )
+      )
+    ),
     
-    tags$style(HTML("
-  .badge {
-    display: inline-block;
-    font-size: 13px;
-    padding: 6px 10px;
-    border-radius: 12px;
-    color: white;
-    margin-right: 5px;
-  }
-  .badge-primary   { background-color: #007bff; }
-  .badge-success   { background-color: #28a745; }
-  .badge-warning   { background-color: #ffc107; color: black; }
-  .badge-info      { background-color: #17a2b8; }
-  .badge-danger    { background-color: #dc3545; }
-  .badge-secondary { background-color: #6c757d; }
-")),
-    
-    tags$style(HTML("
-  .wrap-text {
-    white-space: normal !important;
-    word-wrap: break-word;
-  }
+    #===========================
+    # BODY STYLES & CUSTOM CSS
+    #===========================
+    dashboardBody(
+      id = "tabs",
+      
+      tags$head(
+        # Favicon + Title (again for redundancy)
+        tags$link(rel = "icon", type = "image/png",
+                  href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
+        tags$title("OS Initiatives Tracker"),
+        
+        # ---- Custom Section Styles ----
+        tags$style(HTML("
+          .interactive-section-box {
+            position: relative;
+            border-radius: 20px;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            height: 240px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease-in-out;
+          }
 
-  table.dataTable td {
-    vertical-align: top;
-    font-size: 14px;
-    white-space: normal !important;
-    word-break: break-word;
-    line-height: 1.4;
-  }
-"))
-    
-    
-    
-  ),
-  
+          .section-main .section-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+          }
 
-#--------------------------------------------------
-# Global Overview Tab
-#--------------------------------------------------
+          .section-main .section-title {
+            font-size: 20px;
+            font-weight: bold;
+          }
+
+          .section-main .section-subtitle {
+            font-size: 14px;
+            opacity: 0.85;
+          }
+
+          .section-hover-menu {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.95);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            border-radius: 20px;
+            padding: 20px;
+          }
+
+          .interactive-section-box:hover .section-hover-menu {
+            opacity: 1;
+          }
+
+          .explore-box     { background: linear-gradient(135deg, #1e88e5, #90caf9); }  /* Blue */
+          .analyze-box     { background: linear-gradient(135deg, #f57c00, #ffe0b2); }  /* Orange */
+          .monitor-box     { background: linear-gradient(135deg, #43a047, #c8e6c9); }  /* Green */
+          .contribute-box  { background: linear-gradient(135deg, #d81b60, #f8bbd0); }  /* Pink */
+          .dataset-box     { background: linear-gradient(135deg, #fbc02d, #fff9c4); }  /* Yellow */
+          .about-box       { background: linear-gradient(135deg, #5e35b1, #d1c4e9); }  /* Purple */
+
+          .btn-explore {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            margin: 10px;
+            width: 80%;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+          }
+
+          .btn-explore:hover {
+            background-color: #0056b3;
+          }
+        ")),
+        
+        # ---- Badge Styles for Tables ----
+        tags$style(HTML("
+          .badge {
+            display: inline-block;
+            font-size: 13px;
+            padding: 6px 10px;
+            border-radius: 12px;
+            color: white;
+            margin-right: 5px;
+          }
+
+          .badge-primary   { background-color: #007bff; }
+          .badge-success   { background-color: #28a745; }
+          .badge-warning   { background-color: #ffc107; color: black; }
+          .badge-info      { background-color: #17a2b8; }
+          .badge-danger    { background-color: #dc3545; }
+          .badge-secondary { background-color: #6c757d; }
+        ")),
+        
+        # ---- Table Cell Wrapping ----
+        tags$style(HTML("
+          .wrap-text {
+            white-space: normal !important;
+            word-wrap: break-word;
+          }
+
+          table.dataTable td {
+            vertical-align: top;
+            font-size: 14px;
+            white-space: normal !important;
+            word-break: break-word;
+            line-height: 1.4;
+          }
+        ")),
+        
+        # ---- MCA Plot Container Overflow Fix ----
+        tags$style(HTML("
+          .mca-box-container {
+            overflow-x: auto;
+          }
+        ")),
+        
+        # ---- Header Height Adjustment ----
+        tags$style(HTML("
+          .main-header .navbar {
+            min-height: 50px !important;
+            height: 50px !important;
+          }
+        "))
+        ),
+
+
+# ================================================
+# Dashboard TabItems ----
+# ================================================
 tabItems(
   
-tabItem(tabName = "overview",
-        
-      # -----------------------------
-      # OVERVIEW INTRO BOX – Enhanced
-      # -----------------------------
-      fluidRow(
-        box(
-          title = div(
-            icon("globe-europe", style = "margin-right: 10px;"),  # More suitable icon
-            "Welcome to the Open Science Initiatives Tracker"
-          ),
-          status = "primary",
-          solidHeader = TRUE,
-          width = 12,
-          style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); background: linear-gradient(to right, #f4f9ff, #ffffff);",
+  # --------------------------------------------------
+  # Global Overview Tab -----
+  # --------------------------------------------------
+  tabItem(tabName = "overview",
           
-          # Introductory paragraph with improved text and styling
-          div(
-            style = "font-size:17px; line-height:1.7; padding:20px;",
-            HTML("
-        <p><strong>This dashboard provides a dynamic and community-driven overview of Open Science initiatives around the world.</strong></p>
-        <p>It is designed to support the discovery, classification, and comparative analysis of initiatives promoting openness in scholarly communication.</p>
-        <p><em>Note:</em> Institutional Open Science policies are not included. The dashboard focuses instead on national, community, or infrastructure-based initiatives.</p>
-        <p>You can navigate using the <strong>sidebar menu</strong> or the <strong>interactive cards</strong> just below.</p>
-      ")
-          ),
-          
-          # Counter and action buttons
-          tags$div(
-            style = "text-align: center; padding-bottom: 40px;",
-            
-            tags$i(class = "fa fa-satellite-dish", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
-            
-            tags$div(
-              style = "font-size: 100px; font-weight: bold; color: #007bff;",
-              textOutput("distinct_initiatives")
-            ),
-            
-            tags$div(
-              style = "font-size: 25px; font-weight: bold; color: #333;",
-              "Total number of initiatives included"
-            ),
-            
-            # Action buttons with improved text and icons
-            tags$div(
-              style = "margin-top: 25px;",
+          # -----------------------------
+          # OVERVIEW INTRO BOX – Enhanced
+          # -----------------------------
+          fluidRow(
+            box(
+              title = div(
+                icon("globe-europe", style = "margin-right: 10px;"),  # Icon before title
+                "Welcome to the Open Science Initiatives Tracker"
+              ),
+              status = "primary",
+              solidHeader = TRUE,
+              width = 12,
+              style = "border-radius: 30px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); background: linear-gradient(to right, #f4f9ff, #ffffff);",
               
-              tags$a(
-                href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit#gid=1136935931",
-                target = "_blank",
-                icon("database", class = "me-2"),
-                "View & Download Dataset",
-                style = "color: #ffffff; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
-                   background-color: #007bff; border-radius: 12px; font-size: 16px; font-weight: 500;"
+              # Intro text block
+              div(
+                style = "font-size:17px; line-height:1.7; padding:20px;",
+                HTML("
+            <p><strong>This dashboard provides a dynamic and community-driven overview of Open Science initiatives around the world.</strong></p>
+            <p>It is designed to support the discovery, classification, and comparative analysis of initiatives promoting openness in scholarly communication.</p>
+            <p>You can navigate using the <strong>sidebar menu</strong> or the <strong>interactive cards</strong> just below.</p>
+          ")
               ),
               
-              tags$a(
-                href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
-                target = "_blank",
-                icon("plus-square", class = "me-2"),
-                "Suggest New Initiative",
-                style = "color: #000000; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
-                   background-color: #aaff66; border-radius: 12px; font-size: 16px; font-weight: 500;"
+              # Centered total initiatives count + action buttons
+              tags$div(
+                style = "text-align: center; padding-bottom: 40px;",
+                
+                tags$i(class = "fa fa-satellite-dish", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
+                
+                tags$div(
+                  style = "font-size: 100px; font-weight: bold; color: #007bff;",
+                  textOutput("distinct_initiatives")
+                ),
+                
+                tags$div(
+                  style = "font-size: 25px; font-weight: bold; color: #333;",
+                  "Total number of initiatives included"
+                ),
+                
+                # Two call-to-action buttons
+                tags$div(
+                  style = "margin-top: 25px;",
+                  
+                  tags$a(
+                    href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit#gid=1136935931",
+                    target = "_blank",
+                    icon("database", class = "me-2"),
+                    "View & Download Dataset",
+                    style = "color: #ffffff; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
+                       background-color: #007bff; border-radius: 12px; font-size: 16px; font-weight: 500;"
+                  ),
+                  
+                  tags$a(
+                    href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
+                    target = "_blank",
+                    icon("plus-square", class = "me-2"),
+                    "Suggest New Initiative",
+                    style = "color: #000000; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
+                       background-color: #aaff66; border-radius: 12px; font-size: 16px; font-weight: 500;"
+                  )
+                )
+              )
+            )
+          ),
+          
+          # -----------------------------
+          # VISUAL NAVIGATION CARDS (1)
+          # -----------------------------
+          fluidRow(
+            
+            # EXPLORE BOX
+            column(
+              width = 4,
+              div(
+                class = "interactive-section-box explore-box section-main",
+                tags$i(class = "fas fa-map-marked-alt section-icon"),
+                div(class = "section-title", "Explore Initiatives"),
+                div(class = "section-subtitle", "By country, map, category"),
+                div(class = "section-hover-menu",
+                    actionButton("goto_by_country", "By Country / Region", class = "btn-explore"),
+                    actionButton("goto_by_category", "By Category", class = "btn-explore")
+                )
+              )
+            ),
+            
+            # ANALYZE BOX
+            column(
+              width = 4,
+              div(
+                class = "interactive-section-box analyze-box section-main",
+                tags$i(class = "fas fa-project-diagram section-icon"),
+                div(class = "section-title", "Analyze Structure"),
+                div(class = "section-subtitle", "MCA and clustering"),
+                div(class = "section-hover-menu",
+                    actionButton("goto_mca", "Correspondence Analysis", class = "btn-explore"),
+                    actionButton("goto_hcpc", "Typology – Clustering", class = "btn-explore")
+                )
+              )
+            ),
+            
+            # MONITOR BOX
+            column(
+              width = 4,
+              div(
+                class = "interactive-section-box monitor-box section-main",
+                tags$i(class = "fas fa-balance-scale section-icon"),
+                div(class = "section-title", "Monitoring Framework"),
+                div(class = "section-subtitle", "OSMI Principles & Landscape"),
+                div(class = "section-hover-menu",
+                    actionButton("goto_principles", "OSMI Principles", class = "btn-explore"),
+                    actionButton("goto_monitoring", "Monitoring Landscape", class = "btn-explore")
+                )
+              )
+            )
+          ),
+          
+          # -----------------------------
+          # VISUAL NAVIGATION CARDS (2)
+          # -----------------------------
+          fluidRow(
+            
+            # CONTRIBUTE BOX
+            column(
+              width = 4,
+              div(
+                class = "interactive-section-box contribute-box section-main",
+                tags$i(class = "fas fa-plus-circle section-icon"),
+                div(class = "section-title", "Contribute"),
+                div(class = "section-subtitle", "Add or enrich initiatives"),
+                div(class = "section-hover-menu",
+                    actionButton("goto_add_initiative", "Suggest Initiative", class = "btn-explore")
+                )
+              )
+            ),
+            
+            # DATASET BOX
+            column(
+              width = 4,
+              div(
+                class = "interactive-section-box dataset-box section-main",
+                tags$i(class = "fas fa-database section-icon"),
+                div(class = "section-title", "Dataset Access"),
+                div(class = "section-subtitle", "View or download the full dataset"),
+                div(class = "section-hover-menu",
+                    actionButton("goto_download_data", "Access Dataset", class = "btn-explore")
+                )
+              )
+            ),
+            
+            # ABOUT BOX
+            column(
+              width = 4,
+              div(
+                class = "interactive-section-box about-box section-main",
+                tags$i(class = "fas fa-info-circle section-icon"),
+                div(class = "section-title", "About"),
+                div(class = "section-subtitle", "Project description and FAQs"),
+                div(class = "section-hover-menu",
+                    actionButton("goto_about", "About the Project", class = "btn-explore"),
+                    actionButton("goto_faqs", "FAQs", class = "btn-explore")
+                )
               )
             )
           )
-        )
-      ),
-      
-        
-        
-        #-----------------------------
-        # VISUAL NAVIGATION CARDS (1)
-        #-----------------------------
-        
-      fluidRow(
-        # EXPLORE BOX
-        column(
-          width = 4,
-          div(
-            class = "interactive-section-box explore-box section-main",
-            tags$i(class = "fas fa-map-marked-alt section-icon"),
-            div(class = "section-title", "Explore Initiatives"),
-            div(class = "section-subtitle", "By country, map, category"),
-            div(class = "section-hover-menu",
-                actionButton("goto_by_country", "By Country / Region", class = "btn-explore"),
-                actionButton("goto_by_category", "By Category", class = "btn-explore")
+  ),
+  
+  # --------------------------------------------------
+  # Suggest Initiative Tab -----
+  # --------------------------------------------------
+  tabItem(tabName = "add_initiative",
+          fluidRow(
+            box(
+              title = "Suggest a New Initiative",
+              width = 12,
+              status = "success",
+              solidHeader = TRUE,
+              
+              # Intro text and embedded Google Form
+              div(
+                style = "padding: 10px; font-size: 16px;",
+                tags$p("Use the embedded form below to suggest a new Open Science initiative for inclusion in our dashboard."),
+                tags$iframe(
+                  src = "https://docs.google.com/forms/d/e/1FAIpQLSfCNlKAj8BV-6d9Ls5SiG1tQVEBU28NTYqztt3jszbJQX5gyA/viewform?embedded=true",
+                  width = "100%",
+                  height = "1000px",
+                  frameborder = "0",
+                  style = "border: none;"
+                )
+              )
             )
           )
-        ),
-        
-        # ANALYZE BOX
-        column(
-          width = 4,
-          div(
-            class = "interactive-section-box analyze-box section-main",
-            tags$i(class = "fas fa-project-diagram section-icon"),
-            div(class = "section-title", "Analyze Structure"),
-            div(class = "section-subtitle", "MCA and clustering"),
-            div(class = "section-hover-menu",
-                actionButton("goto_mca", "Correspondence Analysis", class = "btn-explore"),
-                actionButton("goto_hcpc", "Typology – Clustering", class = "btn-explore")
+  ),
+  
+  # --------------------------------------------------
+  # Download Dataset Tab -----
+  # --------------------------------------------------
+  tabItem(tabName = "download_data",
+          fluidRow(
+            box(
+              title = "Access the Dataset",
+              width = 12,
+              status = "info",
+              solidHeader = TRUE,
+              
+              # Embedded Google Sheet + external access button
+              div(
+                style = "padding: 10px; font-size: 16px;",
+                
+                # Top-right button to open the dataset in Google Sheets
+                tags$div(
+                  style = "margin-bottom: 15px; text-align: right;",
+                  tags$a(
+                    href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1136935931",
+                    target = "_blank",
+                    class = "btn btn-primary",
+                    icon("external-link-alt"),
+                    "Open in Google Sheets"
+                  )
+                ),
+                
+                # Embedded live preview of the dataset
+                tags$p("Below is a live preview of the dataset. Use the button above to open the full version for download or copy."),
+                tags$iframe(
+                  src = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/preview",
+                  width = "100%",
+                  height = "800px",
+                  frameborder = "0",
+                  style = "border: none;"
+                )
+              )
             )
           )
-        ),
+  ),
+
+
+# --------------------------------------------------
+# Initiatives by Category Tab -----
+# --------------------------------------------------
+tabItem(tabName = "by_category",
         
-        # MONITOR BOX
-        column(
-          width = 4,
-          div(
-            class = "interactive-section-box monitor-box section-main",
-            tags$i(class = "fas fa-balance-scale section-icon"),
-            div(class = "section-title", "Monitoring Framework"),
-            div(class = "section-subtitle", "OSMI Principles & Landscape"),
-            div(class = "section-hover-menu",
-                actionButton("goto_principles", "OSMI Principles", class = "btn-explore"),
-                actionButton("goto_monitoring", "Monitoring Landscape", class = "btn-explore")
-            )
-          )
-        )
-      ),
-      
-        
-        #-----------------------------
-        # VISUAL NAVIGATION CARDS (2)
-        #-----------------------------
+        # Bar Chart: Distribution by category
         fluidRow(
-          # Contribute
-
-          column(
-            width = 4,
-            div(
-              class = "interactive-section-box contribute-box section-main",
-              tags$i(class = "fas fa-plus-circle section-icon"),
-              div(class = "section-title", "Contribute"),
-              div(class = "section-subtitle", "Add or enrich initiatives"),
-              div(class = "section-hover-menu",
-                  actionButton("goto_add_initiative", "Suggest Initiative", class = "btn-explore")
-              )
-            )
-          ),
-          
-          
-          
-          # Dataset
-         
-          column(
-            width = 4,
-            div(
-              class = "interactive-section-box dataset-box section-main",
-              tags$i(class = "fas fa-database section-icon"),
-              div(class = "section-title", "Dataset Access"),
-              div(class = "section-subtitle", "View or download the full dataset"),
-              div(class = "section-hover-menu",
-                  actionButton("goto_download_data", "Access Dataset", class = "btn-explore")
-              )
-            )
-          ),
-          
-          
-          
-          # About
-
-          column(
-            width = 4,
-            div(
-              class = "interactive-section-box about-box section-main",
-              tags$i(class = "fas fa-info-circle section-icon"),
-              div(class = "section-title", "About"),
-              div(class = "section-subtitle", "Project description and FAQs"),
-              div(class = "section-hover-menu",
-                  actionButton("goto_about", "About the Project", class = "btn-explore"),
-                  actionButton("goto_faqs", "FAQs", class = "btn-explore")
-              )
+          box(
+            title = "Initiatives by Category", 
+            status = "info", 
+            solidHeader = TRUE, 
+            width = 12,
+            
+            # Interactive Plotly chart
+            plotlyOutput("category_plot"),
+            
+            # Description under the plot
+            tags$p(
+              "This bar chart provides an overview of the number of initiatives grouped by their focus area. 
+        Hover over each bar to view detailed counts, or click on a bar to explore the specific initiatives within the selected category."
             )
           )
-          
-          
-          
-        )),
-
-
-        #--------------------------------------------------
-        # Suggest Initiative Tab
-        #--------------------------------------------------
-        tabItem(tabName = "add_initiative",
-                fluidRow(
-                  box(
-                    title = "Suggest a New Initiative",
-                    width = 12,
-                    status = "success",
-                    solidHeader = TRUE,
-                    
-                    # Description + embedded Google Form
-                    div(
-                      style = "padding: 10px; font-size: 16px;",
-                      tags$p("Use the embedded form below to suggest a new Open Science initiative for inclusion in our dashboard."),
-                      
-                      tags$iframe(
-                        src = "https://docs.google.com/forms/d/e/1FAIpQLSfCNlKAj8BV-6d9Ls5SiG1tQVEBU28NTYqztt3jszbJQX5gyA/viewform?embedded=true",
-                        width = "100%",
-                        height = "1000px",
-                        frameborder = "0",
-                        style = "border: none;"
-                      )
-                    )
-                  )
-                )
-        ),
-
-        #--------------------------------------------------
-        # Download Dataset Tab
-        #--------------------------------------------------
-        tabItem(tabName = "download_data",
-                fluidRow(
-                  box(
-                    title = "Access the Dataset",
-                    width = 12,
-                    status = "info",
-                    solidHeader = TRUE,
-                    
-                    div(
-                      style = "padding: 10px; font-size: 16px;",
-                      
-                      # Button to open full Google Sheet in a new tab
-                      tags$div(
-                        style = "margin-bottom: 15px; text-align: right;",
-                        tags$a(
-                          href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1136935931",
-                          target = "_blank",
-                          class = "btn btn-primary",
-                          icon("external-link-alt"),
-                          "Open in Google Sheets"
-                        )
-                      ),
-                      
-                      # Live embedded view of the spreadsheet (read-only preview)
-                      tags$p("Below is a live preview of the dataset. Use the button above to open the full version for download or copy."),
-                      
-                      tags$iframe(
-                        src = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/preview",
-                        width = "100%",
-                        height = "800px",
-                        frameborder = "0",
-                        style = "border: none;"
-                      )
-                    )
-                  )
-                )
         ),
         
-      
-        #--------------------------------------------------
-        # Initiatives by Category Tab
-        #--------------------------------------------------
-        
-      tabItem(tabName = "by_category",
-              fluidRow(
-                box(
-                  title = "Initiatives by Category", 
-                  status = "info", 
-                  solidHeader = TRUE, 
-                  width = 12,
-                  plotlyOutput("category_plot"),
-                  tags$p(
-                    "This bar chart provides an overview of the number of initiatives grouped by their focus area. Hover over each bar to view detailed counts, or click on a bar to explore the specific initiatives within the selected category."
-                  )
-                )
-              ),
-              
-              fluidRow(
-                box(
-                  title = "Selected Initiatives List",
-                  status = "info",
-                  solidHeader = TRUE,
-                  width = 12,
-                  uiOutput("clicked_initiatives"),
-                  tags$p(
-                    "Click on a bar above to view the initiatives belonging to the selected category.",
-                    style = "color: #555;"
-                  )
-                )
-              )
-      ),
-      
+        # List of initiatives selected by clicking on a category
+        fluidRow(
+          box(
+            title = "Selected Initiatives List",
+            status = "info",
+            solidHeader = TRUE,
+            width = 12,
+            
+            # Rendered list of clicked initiatives
+            uiOutput("clicked_initiatives"),
+            
+            tags$p(
+              "Click on a bar above to view the initiatives belonging to the selected category.",
+              style = "color: #555;"
+            )
+          )
+        )
+),
 
-      #--------------------------------------------------
-      # Global Distribution of Initiatives Tab
-      #--------------------------------------------------
-      
+
+# --------------------------------------------------
+# Global Distribution of Initiatives Tab -----
+# --------------------------------------------------
 tabItem(tabName = "by_country",
         
-        # First Box (Full Width)
+        # World Map of initiatives
         fluidRow(
           column(
             width = 12,
@@ -877,16 +720,23 @@ tabItem(tabName = "by_country",
               status = "success",
               solidHeader = TRUE,
               width = NULL,
+              
+              # Leaflet interactive map
               leafletOutput("world_map"),
+              
+              # Apply custom popup CSS (defined elsewhere)
               tags$style(HTML(popup_css)),
+              
+              # Descriptive paragraph below the map
               tags$p(
-                "This map visualizes the geographical distribution of open science initiatives around the world. Click on the bubbles to view the number of initiatives per country and a list of the specific projects."
+                "This map visualizes the geographical distribution of open science initiatives around the world. 
+          Click on the bubbles to view the number of initiatives per country and a list of the specific projects."
               )
             )
           )
         ),
         
-        # Second Box (Full Width, Below)
+        # Community governance map
         fluidRow(
           column(
             width = 12,
@@ -895,68 +745,57 @@ tabItem(tabName = "by_country",
               status = "warning",
               solidHeader = TRUE,
               width = NULL,
+              
+              # Second map focused on governance types
               leafletOutput("comm_gov"),
+              
               tags$p(
-                "This map displays a comparison of community governance practices in open science initiatives. The pie charts represent the proportion of initiatives with and without community-driven governance structures."
+                "This map displays a comparison of community governance practices in open science initiatives. 
+          The pie charts represent the proportion of initiatives with and without community-driven governance structures."
               )
             )
           )
         )
-)
-,
-      
-      # --------------------------------------------
-      # Monitoring principles Tab
-      # --------------------------------------------
-      
-      tabItem(tabName = "principles",
-      
-              tags$head(
-                tags$style(HTML("
-    .section-card {
-      border-radius: 16px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-      padding: 20px;
-      height: 100%;
-      transition: all 0.3s ease-in-out;
-      cursor: pointer;
-      color: #fff;
-    }
+),
 
-    .section-card:hover {
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-      transform: translateY(-5px);
-    }
 
-    .section-icon {
-      font-size: 40px;
-      margin-bottom: 10px;
-    }
+# --------------------------------------------------
+# Monitoring Principles Tab -----
+# --------------------------------------------------
+tabItem(tabName = "principles",
+        
+        # ---- CSS STYLING FOR CARDS ----
+        tags$head(
+          tags$style(HTML("
+      .section-card {
+        border-radius: 16px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        padding: 20px;
+        height: 100%;
+        transition: all 0.3s ease-in-out;
+        cursor: pointer;
+        color: #fff;
+      }
+      .section-card:hover {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        transform: translateY(-5px);
+      }
+      .section-icon { font-size: 40px; margin-bottom: 10px; }
+      .section-title { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+      .section-subtitle { font-size: 14px; opacity: 0.85; }
 
-    .section-title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    .section-subtitle {
-      font-size: 14px;
-      opacity: 0.85;
-    }
-
-    .explore-card    { background-color: #007bff; }   /* Blue */
-    .analyze-card    { background-color: #6f42c1; }   /* Purple */
-    .monitor-card    { background-color: #17a2b8; }   /* Teal */
-    .contribute-card { background-color: #28a745; }   /* Green */
-    .dataset-card    { background-color: #20c997; }   /* Mint */
-    .about-card      { background-color: #fd7e14; }   /* Orange */
-  "))
-              )
-              ,        
-              
-              
-              tags$head(
-                tags$style(HTML("
+      .explore-card    { background-color: #007bff; }   /* Blue */
+      .analyze-card    { background-color: #6f42c1; }   /* Purple */
+      .monitor-card    { background-color: #17a2b8; }   /* Teal */
+      .contribute-card { background-color: #28a745; }   /* Green */
+      .dataset-card    { background-color: #20c997; }   /* Mint */
+      .about-card      { background-color: #fd7e14; }   /* Orange */
+    "))
+        ),
+        
+        # ---- CSS STYLING FOR ACCORDIONS ----
+        tags$head(
+          tags$style(HTML("
       .principle-section {
         padding: 50px 40px;
         background-color: #f9fafb;
@@ -964,7 +803,6 @@ tabItem(tabName = "by_country",
         background-size: cover;
         background-position: center;
       }
-
       .principle-title-main {
         font-size: 38px;
         font-weight: 800;
@@ -972,14 +810,12 @@ tabItem(tabName = "by_country",
         color: #1f2937;
         margin-bottom: 10px;
       }
-
       .principle-subtitle {
         font-size: 17px;
         text-align: center;
         color: #6b7280;
         margin-bottom: 40px;
       }
-
       details.accordion-card {
         background-color: #ffffffdd;
         border-radius: 18px;
@@ -989,11 +825,9 @@ tabItem(tabName = "by_country",
         border-left: 6px solid #3b82f6;
         transition: all 0.3s ease;
       }
-
       details[open].accordion-card {
         box-shadow: 0 28px 40px rgba(0,0,0,0.08);
       }
-
       summary.accordion-header {
         padding: 22px 30px;
         font-size: 20px;
@@ -1006,28 +840,21 @@ tabItem(tabName = "by_country",
         cursor: pointer;
         transition: background 0.3s ease;
       }
-
       summary.accordion-header:hover {
         background: linear-gradient(to right, #2563eb, #60a5fa);
       }
-
       .accordion-content {
         padding: 25px 35px;
         background-color: #ffffff;
         animation: fadeIn 0.4s ease-in-out;
       }
-
-      .accordion-content ul {
-        padding-left: 20px;
-      }
-
+      .accordion-content ul { padding-left: 20px; }
       .accordion-content li {
         margin-bottom: 12px;
         font-size: 16px;
         line-height: 1.7;
         color: #374151;
       }
-
       .badge-circle {
         width: 42px;
         height: 42px;
@@ -1038,24 +865,20 @@ tabItem(tabName = "by_country",
         justify-content: center;
         font-size: 18px;
       }
-
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
       }
-
       .osmi-logo-small {
         height: 36px;
         float: right;
         margin-top: -10px;
         opacity: 0.85;
       }
-
       .source-box {
         text-align: center;
         margin-top: 40px;
       }
-
       .source-box a {
         display: inline-block;
         margin-top: 10px;
@@ -1068,40 +891,42 @@ tabItem(tabName = "by_country",
         font-size: 15px;
         transition: background-color 0.3s ease;
       }
-
       .source-box a:hover {
         background-color: #00386f;
       }
     "))
-              ),
-              
- 
-              fluidRow(
-                column(12,
-                       div(class = "principle-section",
-                           
-                           # Header
-                           div(
-                             style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
-                             div(
-                               style = "flex: 1; min-width: 250px;",
-                               div(class = "principle-title-main", "Principles of Open Science Monitoring"),
-                               div(class = "principle-subtitle", "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
-                             ),
-                             tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
-                           ),
-                           
-                           br(),
-                           
-                           # Accordion Block 1
-                           tags$details(class = "accordion-card",
-                                        style = "border-left: 6px solid #3b82f6;",
-                                        tags$summary(class = "accordion-header",
-                                                     style = "background: linear-gradient(to right, #3b82f6, #60a5fa);",
-                                                     span(class = "badge-circle", icon("lightbulb")),
-                                                     "Part 1: Relevance and Significance"
-                                        ),
-                                        div(class = "accordion-content", HTML("
+        ),
+        
+        # ---- CONTENT SECTION ----
+        fluidRow(
+          column(12,
+                 
+                 # Main section container
+                 div(class = "principle-section",
+                     
+                     # Header with title and OSMI logo
+                     div(
+                       style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; 
+                   display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
+                       div(
+                         style = "flex: 1; min-width: 250px;",
+                         div(class = "principle-title-main", "Principles of Open Science Monitoring"),
+                         div(class = "principle-subtitle", 
+                             "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
+                       ),
+                       tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
+                     ),
+                     
+                     br(),
+                     
+                     # ----- Accordion 1: Relevance and Significance -----
+                     tags$details(class = "accordion-card", style = "border-left: 6px solid #3b82f6;",
+                                  tags$summary(class = "accordion-header",
+                                               style = "background: linear-gradient(to right, #3b82f6, #60a5fa);",
+                                               span(class = "badge-circle", icon("lightbulb")),
+                                               "Part 1: Relevance and Significance"
+                                  ),
+                                  div(class = "accordion-content", HTML("
             <ul>
               <li><strong>Applicable and clear in scope:</strong> Indicators must be explicitly defined, relevant and scoped appropriately.</li>
               <li><strong>Meaningful for planning and policy:</strong> Indicators should support policy-making across contexts.</li>
@@ -1112,17 +937,16 @@ tabItem(tabName = "by_country",
               <li><strong>Consistent:</strong> Enable long-term, cross-institutional comparability.</li>
             </ul>
           "))
-                           ),
-                           
-                           # Accordion Block 2
-                           tags$details(class = "accordion-card",
-                                        style = "border-left: 6px solid #d4af37;",
-                                        tags$summary(class = "accordion-header",
-                                                     style = "background: linear-gradient(to right, #facc15, #fde68a);",
-                                                     span(class = "badge-circle", icon("eye")),
-                                                     "Part 2: Transparency and Reproducibility"
-                                        ),
-                                        div(class = "accordion-content", HTML("
+                     ),
+                     
+                     # ----- Accordion 2: Transparency and Reproducibility -----
+                     tags$details(class = "accordion-card", style = "border-left: 6px solid #d4af37;",
+                                  tags$summary(class = "accordion-header",
+                                               style = "background: linear-gradient(to right, #facc15, #fde68a);",
+                                               span(class = "badge-circle", icon("eye")),
+                                               "Part 2: Transparency and Reproducibility"
+                                  ),
+                                  div(class = "accordion-content", HTML("
             <ul>
               <li><strong>Openness:</strong> Use open infrastructures, tools, and licenses.</li>
               <li><strong>Quality of sources:</strong> Data must be timely, complete, and accurate.</li>
@@ -1134,17 +958,16 @@ tabItem(tabName = "by_country",
               <li><strong>Conflict of interest:</strong> Declare transparently when relevant.</li>
             </ul>
           "))
-                           ),
-                           
-                           # Accordion Block 3
-                           tags$details(class = "accordion-card",
-                                        style = "border-left: 6px solid #8b5cf6;",
-                                        tags$summary(class = "accordion-header",
-                                                     style = "background: linear-gradient(to right, #8b5cf6, #c4b5fd);",
-                                                     span(class = "badge-circle", icon("balance-scale")),
-                                                     "Part 3: Self-Assessment and Responsible Use"
-                                        ),
-                                        div(class = "accordion-content", HTML("
+                     ),
+                     
+                     # ----- Accordion 3: Self-Assessment and Responsible Use -----
+                     tags$details(class = "accordion-card", style = "border-left: 6px solid #8b5cf6;",
+                                  tags$summary(class = "accordion-header",
+                                               style = "background: linear-gradient(to right, #8b5cf6, #c4b5fd);",
+                                               span(class = "badge-circle", icon("balance-scale")),
+                                               "Part 3: Self-Assessment and Responsible Use"
+                                  ),
+                                  div(class = "accordion-content", HTML("
             <ul>
               <li><strong>Self-evaluation:</strong> Regularly assess and disclose alignment with these principles.</li>
               <li><strong>Revision:</strong> Continuously improve and adapt indicators over time.</li>
@@ -1153,243 +976,258 @@ tabItem(tabName = "by_country",
               <li><strong>Constructive comparison:</strong> Avoid rankings, encourage fair benchmarking.</li>
             </ul>
           "))
-                           ),
-                           
-                           # Footer
-                           div(class = "source-box",
-                               tags$em("Source: Open Science Monitoring Initiative, 2025"),
-                               tags$br(),
-                               tags$a(href = "https://doi.org/10.5281/zenodo.15807481", target = "_blank", "Access full document")
-                           )
-                       )
-                )
-              )
-      ),
-      
-      
-      # --------------------------------------------
-      # MCA & Clustering Tab
-      # --------------------------------------------
-      tabItem(tabName = "mca",
-              fluidRow(
-                # MCA NonProfit + Interpretation
-                column(width = 7.5,
-                       box(
-                         title = "Multiple Correspondence Analysis (MCA): NonProfit",
-                         status = "primary",
-                         solidHeader = TRUE,
-                         width = 12,
-                         uiOutput("mca_plot_ui"),
-                         tags$p(
-                           "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives."
+                     ),
+                     
+                     # ---- Footer with Source Link ----
+                     div(class = "source-box",
+                         tags$em("Source: Open Science Monitoring Initiative, 2025"),
+                         tags$br(),
+                         tags$a(
+                           href = "https://doi.org/10.5281/zenodo.15807481",
+                           target = "_blank",
+                           "Access full document"
                          )
-                       )
-                ),
-                column(width = 4.5,
-                       box(
-                         title = "How to Interpret the MCA Plot (NonProfit)",
-                         status = "info",
-                         solidHeader = TRUE,
-                         width = 12,
-                         tags$div(
-                           style = "font-size: 15px; line-height: 1.6;",
-                           tags$p("This plot displays the results of a Multiple Correspondence Analysis (MCA) performed on categorical variables describing open science initiatives. Each point in the plot represents a single initiative."),
-                           tags$ul(
-                             tags$li(tags$b("What is plotted:"), "Initiatives are projected into a reduced two-dimensional space derived from categorical variables such as their nonprofit status, governance model, and category."),
-                             tags$li(tags$b("Color coding:"), "Points are colored by profit status: red for for-profit initiatives and blue for nonprofit ones. This makes it easy to visually assess how these types of organizations distribute across the MCA space."),
-                             tags$li(tags$b("Axes (Dimensions):"), "The horizontal and vertical axes correspond to the first two dimensions of the MCA, which summarize the most significant patterns in the data."),
-                             tags$li(tags$b("Spatial interpretation:"), "Initiatives that are closer together on the plot tend to share similar characteristics. For example, a cluster of nonprofit initiatives might share governance structures or operational models."),
-                             tags$li(tags$b("Purpose:"), "This plot helps to uncover latent profiles in the ecosystem of open science initiatives, showing how nonprofit and for-profit entities differentiate across multiple categorical dimensions.")
-                           ),
-                         )
-                       )
-                )
-              ),
-              
-              fluidRow(
-                # MCA Category + Interpretation
-                column(width = 7.5,
-                       box(
-                           title = "Multiple Correspondence Analysis (MCA): Category",
-                           status = "primary",
-                           solidHeader = TRUE,
-                           width = 12,
-                           uiOutput("mca_plot_ui2"),
-                           tags$p(
-                           "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
-                           )
-                         )
-                ),
-                column(width = 4.5,
-                       box(
-                         title = "How to Interpret the MCA Plot (Category)",
-                         status = "info",
-                         solidHeader = TRUE,
-                         width = 12,
-                         tags$div(
-                           style = "font-size: 15px; line-height: 1.6;",
-                           tags$p("This plot shows the same MCA projection, but colored by the main category of each initiative (e.g., publishing platform, repository, infrastructure)."),
-                           tags$ul(
-                             tags$li(tags$b("What is plotted:"), "Each point is an open science initiative, projected based on their categorical characteristics."),
-                             tags$li(tags$b("Color coding:"), "Initiatives are colored according to their assigned category, allowing for visual comparison between types of services or platforms."),
-                             tags$li(tags$b("Interpretation:"), "Initiatives from the same category may appear grouped together if they share common traits. Conversely, scattered colors within a region may indicate overlapping features between categories."),
-                             tags$li(tags$b("Axes:"), "As in the previous plot, the axes represent the two main MCA dimensions, providing a simplified structure of multivariate associations."),
-                             tags$li(tags$b("Goal:"), "This visualization supports the identification of functional or organizational similarities between initiatives, beyond their declared category.")
-                           ),
-                           tags$p("This view highlights the internal diversity or homogeneity within categories, and helps detect hybrid initiatives that span multiple functions.")
-                         )
-                       )
-                )
-              )
-              ),
-          tabItem(tabName = "hcpc",    
-              fluidRow(
-                # Dendrogram + Interpretation
-                column(width = 7.5,
-                       box(
-                         title = "Hierarchical Clustering Dendrogram",
-                         status = "danger",
-                         solidHeader = TRUE,
-                         width = 12,
-                         plotlyOutput("dendrogram", height = "2000px"),
-                         tags$p(
-                           "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
-                         )
-                       )
-                ),
-                column(width = 4.5,
-                       box(
-                         title = "How to Interpret the Clustering Dendrogram",
-                         status = "info",
-                         solidHeader = TRUE,
-                         width = 12,
-                         tags$div(
-                           style = "font-size: 15px; line-height: 1.6;",
-                           tags$p("The dendrogram visualizes the result of a hierarchical clustering performed on the coordinates obtained from the MCA. It helps group similar initiatives based on the MCA's multi-dimensional representation."),
-                           tags$ul(
-                             tags$li(tags$b("What is clustered:"), "The clustering uses the MCA coordinates of each initiative, capturing the variation across all selected categorical variables."),
-                             tags$li(tags$b("Height of branches:"), "The vertical position where two branches merge represents the dissimilarity between the groups. The lower the merge, the more similar the initiatives."),
-                             tags$li(tags$b("Cutting the tree:"), "By cutting the dendrogram at a specific height, we can define distinct clusters (groups) of initiatives."),
-                             tags$li(tags$b("Interpretation of clusters:"), "Each cluster brings together initiatives with similar profiles—often combinations of being nonprofit, community-based, and operating within a given category.")
-                           ),
-                           tags$p("The clustering was performed using Euclidean distances on MCA coordinates, followed by a hierarchical method (Ward's linkage). This method helps define meaningful typologies of open science initiatives.")
-                         )
-                       )
-                )
-              ),
-              
-              # External Link to Cluster Table
-              fluidRow(
-                box(
-                  title = "View Clusters",
-                  status = "info",
-                  solidHeader = TRUE,
-                  width = 12,
-                  style = "cursor: pointer; text-align: center; font-size: 18px; border-radius: 15px; border: 1px solid #007bff; padding: 20px; transition: all 0.3s ease-in-out; color: white;",
-                  tags$a(
-                    href = "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494",
-                    target = "_blank",
-                    "📊 Access Clusters on Google Sheets",
-                    style = "color: #ffffff; text-decoration: none; display: inline-block; padding: 15px 30px; background-color: #007bff; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease;"
-                  ),
-                  tags$p(
-                    "Click the link above to explore the clustering results in more detail, including which initiatives belong to each cluster.",
-                    style = "margin-top: 15px; font-size: 16px; line-height: 1.6; color: #0a0303; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);"
-                  )
-                )
-              )
-      ),
-      
-      # --------------------------------------------
-      # Monitoring Tab
-      # --------------------------------------------
-      tabItem(tabName = "monitoring",
-              fluidRow(
-                box(
-                  title = "Open Science Monitoring Initiatives",
-                  status = "primary",
-                  solidHeader = TRUE,
-                  width = 12,
-                  DT::dataTableOutput("monitoring_table"),
-                  tags$p(
-                    "This interactive table lists various national, international, institutional, and specialized initiatives monitoring open science. Click on a column header to sort or use the search bar to filter."
-                  ),
-                  tags$a(
-                    href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1576141174#gid=1576141174",
-                    target = "_blank",
-                    "📥 View or edit full Google Sheet here",
-                    style = "display:inline-block; margin-top:10px; font-size:16px;"
-                  )
-                )
-              ),
-              
-              fluidRow(
-                box(
-                  title = tagList(icon("globe"), "Focus by country/region: Open Science Initiatives"),
-                  width = 12,
-                  status = "primary",
-                  solidHeader = TRUE,
-                  collapsible = TRUE,
-                  collapsed = FALSE,
-                  DT::dataTableOutput("focus_table"),
-                  tags$p(
-                    "This table presents major open science initiatives from Nordic countries, including national dashboards, infrastructures, funding programmes, and collaborative platforms. It offers an entry point to explore regional efforts and synergies in open science.",
-                    style = "margin-top:10px; font-size:15px;"
-                  ),
-                  tags$a(
-                    href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=2146313781#gid=2146313781",
-                    target = "_blank",
-                    "📥 View or edit full Google Sheet here",
-                    style = "display:inline-block; margin-top:10px; font-size:16px;"
-                  )
-                )
-              )
-              
-      ),
-      
-      
-      
-      # --------------------------------------------
-      # About Tab
-      # --------------------------------------------
-      tabItem(tabName = "about",
-              fluidRow(
-                div(
-                  style = "padding: 20px; text-align: center; font-size: 18px;",
-                  tags$p(tags$strong("About this project")),
-                  tags$iframe(
-                    src = "https://docs.google.com/document/d/163di4K3TfQqM-zqEc7IrxB7SCnhiZPn0pK-fbQrIftQ/preview",
-                    width = "100%",
-                    height = "800px",
-                    style = "border: none;"
-                  )
-                )
-              )
-      ),
-      
-      # --------------------------------------------
-      # FAQs Tab
-      # --------------------------------------------
-      tabItem(tabName = "FAQs",
-              fluidRow(
-                div(
-                  style = "padding: 20px; text-align: center; font-size: 18px;",
-                  tags$p(tags$strong("Frequently Asked Questions - FAQs")),
-                  tags$iframe(
-                    src = "https://docs.google.com/document/d/1F0CrXoXABLvmHDQO3ChrjtR_u9g7Zz5K4tzziCTsqEQ/preview",
-                    width = "100%",
-                    height = "800px",
-                    style = "border: none;"
-                  )
-                )
-              )
+                     )
+                 )
+          )
+        )
+),
+
+
+# --------------------------------------------------
+# MCA Tab: Multiple Correspondence Analysis -----
+# --------------------------------------------------
+tabItem(tabName = "mca",
+        fluidRow(
+          # ---- MCA Plot: NonProfit Status ----
+          column(width = 7.5,
+                 box(
+                   title = "Multiple Correspondence Analysis (MCA): NonProfit",
+                   status = "primary",
+                   solidHeader = TRUE,
+                   width = 12,
+                   uiOutput("mca_plot_ui"),
+                   tags$p(
+                     "This plot shows the results of a Multiple Correspondence Analysis (MCA), focusing on the first two dimensions. It visualizes the relationships between different characteristics of open science initiatives."
+                   )
+                 )
+          ),
+          
+          # ---- MCA Interpretation: NonProfit ----
+          column(width = 4.5,
+                 box(
+                   title = "How to Interpret the MCA Plot (NonProfit)",
+                   status = "info",
+                   solidHeader = TRUE,
+                   width = 12,
+                   tags$div(
+                     style = "font-size: 15px; line-height: 1.6;",
+                     tags$p("This plot displays the results of a Multiple Correspondence Analysis (MCA) performed on categorical variables describing open science initiatives. Each point in the plot represents a single initiative."),
+                     tags$ul(
+                       tags$li(tags$b("What is plotted:"), "Initiatives are projected into a reduced two-dimensional space derived from categorical variables such as their nonprofit status, governance model, and category."),
+                       tags$li(tags$b("Color coding:"), "Points are colored by profit status: red for for-profit initiatives and blue for nonprofit ones. This makes it easy to visually assess how these types of organizations distribute across the MCA space."),
+                       tags$li(tags$b("Axes (Dimensions):"), "The horizontal and vertical axes correspond to the first two dimensions of the MCA, which summarize the most significant patterns in the data."),
+                       tags$li(tags$b("Spatial interpretation:"), "Initiatives that are closer together on the plot tend to share similar characteristics. For example, a cluster of nonprofit initiatives might share governance structures or operational models."),
+                       tags$li(tags$b("Purpose:"), "This plot helps to uncover latent profiles in the ecosystem of open science initiatives, showing how nonprofit and for-profit entities differentiate across multiple categorical dimensions.")
+                     )
+                   )
+                 )
+          )
+        ),
+        
+        fluidRow(
+          # ---- MCA Plot: By Category ----
+          column(width = 7.5,
+                 box(
+                   title = "Multiple Correspondence Analysis (MCA): Category",
+                   status = "primary",
+                   solidHeader = TRUE,
+                   width = 12,
+                   uiOutput("mca_plot_ui2"),
+                   tags$p(
+                     "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
+                   )
+                 )
+          ),
+          
+          # ---- MCA Interpretation: By Category ----
+          column(width = 4.5,
+                 box(
+                   title = "How to Interpret the MCA Plot (Category)",
+                   status = "info",
+                   solidHeader = TRUE,
+                   width = 12,
+                   tags$div(
+                     style = "font-size: 15px; line-height: 1.6;",
+                     tags$p("This plot shows the same MCA projection, but colored by the main category of each initiative (e.g., publishing platform, repository, infrastructure)."),
+                     tags$ul(
+                       tags$li(tags$b("What is plotted:"), "Each point is an open science initiative, projected based on their categorical characteristics."),
+                       tags$li(tags$b("Color coding:"), "Initiatives are colored according to their assigned category, allowing for visual comparison between types of services or platforms."),
+                       tags$li(tags$b("Interpretation:"), "Initiatives from the same category may appear grouped together if they share common traits. Conversely, scattered colors within a region may indicate overlapping features between categories."),
+                       tags$li(tags$b("Axes:"), "As in the previous plot, the axes represent the two main MCA dimensions, providing a simplified structure of multivariate associations."),
+                       tags$li(tags$b("Goal:"), "This visualization supports the identification of functional or organizational similarities between initiatives, beyond their declared category.")
+                     ),
+                     tags$p("This view highlights the internal diversity or homogeneity within categories, and helps detect hybrid initiatives that span multiple functions.")
+                   )
+                 )
+          )
+        )
+),
+
+# --------------------------------------------------
+# HCPC Tab: Hierarchical Clustering -----
+# --------------------------------------------------
+tabItem(tabName = "hcpc",
+        fluidRow(
+          # ---- Dendrogram Plot ----
+          column(width = 7.5,
+                 box(
+                   title = "Hierarchical Clustering Dendrogram",
+                   status = "danger",
+                   solidHeader = TRUE,
+                   width = 12,
+                   plotlyOutput("dendrogram", height = "2000px"),
+                   tags$p(
+                     "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
+                   )
+                 )
+          ),
+          
+          # ---- Dendrogram Interpretation ----
+          column(width = 4.5,
+                 box(
+                   title = "How to Interpret the Clustering Dendrogram",
+                   status = "info",
+                   solidHeader = TRUE,
+                   width = 12,
+                   tags$div(
+                     style = "font-size: 15px; line-height: 1.6;",
+                     tags$p("The dendrogram visualizes the result of a hierarchical clustering performed on the coordinates obtained from the MCA. It helps group similar initiatives based on the MCA's multi-dimensional representation."),
+                     tags$ul(
+                       tags$li(tags$b("What is clustered:"), "The clustering uses the MCA coordinates of each initiative, capturing the variation across all selected categorical variables."),
+                       tags$li(tags$b("Height of branches:"), "The vertical position where two branches merge represents the dissimilarity between the groups. The lower the merge, the more similar the initiatives."),
+                       tags$li(tags$b("Cutting the tree:"), "By cutting the dendrogram at a specific height, we can define distinct clusters (groups) of initiatives."),
+                       tags$li(tags$b("Interpretation of clusters:"), "Each cluster brings together initiatives with similar profiles—often combinations of being nonprofit, community-based, and operating within a given category.")
+                     ),
+                     tags$p("The clustering was performed using Euclidean distances on MCA coordinates, followed by a hierarchical method (Ward's linkage). This method helps define meaningful typologies of open science initiatives.")
+                   )
+                 )
+          )
+        ),
+        
+        # ---- External Link to Cluster Table ----
+        fluidRow(
+          box(
+            title = "View Clusters",
+            status = "info",
+            solidHeader = TRUE,
+            width = 12,
+            style = "cursor: pointer; text-align: center; font-size: 18px; border-radius: 15px; border: 1px solid #007bff;
+               padding: 20px; transition: all 0.3s ease-in-out; color: white;",
+            tags$a(
+              href = "https://docs.google.com/spreadsheets/d/1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8/edit?gid=998126494#gid=998126494",
+              target = "_blank",
+              "📥 Access Clusters on Google Sheets",
+              style = "color: #ffffff; text-decoration: none; display: inline-block; padding: 15px 30px;
+                 background-color: #007bff; border-radius: 10px; font-weight: bold; font-size: 16px;
+                 box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); transition: background-color 0.3s ease;"
+            ),
+            tags$p(
+              "Click the link above to explore the clustering results in more detail, including which initiatives belong to each cluster.",
+              style = "margin-top: 15px; font-size: 16px; line-height: 1.6; color: #0a0303;
+                 text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);"
+            )
+          )
+        )
+),
+
+# --------------------------------------------------
+# Monitoring Tab: Monitoring Landscape Table -----
+# --------------------------------------------------
+tabItem(tabName = "monitoring",
+        fluidRow(
+          # ---- Table 1: Global Monitoring Initiatives ----
+          box(
+            title = "Open Science Monitoring Initiatives",
+            status = "primary",
+            solidHeader = TRUE,
+            width = 12,
+            DT::dataTableOutput("monitoring_table"),
+            tags$p(
+              "This interactive table lists various national, international, institutional, and specialized initiatives monitoring open science. Click on a column header to sort or use the search bar to filter."
+            ),
+            tags$a(
+              href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1576141174#gid=1576141174",
+              target = "_blank",
+              "📥 View or edit full Google Sheet here",
+              style = "display:inline-block; margin-top:10px; font-size:16px;"
+            )
+          )
+        ),
+        
+        fluidRow(
+          # ---- Table 2: Regional Focus Table ----
+          box(
+            title = tagList(icon("globe"), "Focus by country/region: Open Science Initiatives"),
+            width = 12,
+            status = "primary",
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            collapsed = FALSE,
+            DT::dataTableOutput("focus_table"),
+            tags$p(
+              "This table presents major open science initiatives, including national dashboards, infrastructures, funding programmes, and collaborative platforms. It offers an entry point to explore regional efforts and synergies in open science.",
+              style = "margin-top:10px; font-size:15px;"
+            ),
+            tags$a(
+              href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=2146313781#gid=2146313781",
+              target = "_blank",
+              "📥 View or edit full Google Sheet here",
+              style = "display:inline-block; margin-top:10px; font-size:16px;"
+            )
+          )
+        )
+),
+
+# --------------------------------------------------
+# About Tab: Project Description (Embedded Google Doc)
+# --------------------------------------------------
+tabItem(tabName = "about",
+        fluidRow(
+          div(
+            style = "padding: 20px; text-align: center; font-size: 18px;",
+            tags$p(tags$strong("About this project")),
+            tags$iframe(
+              src = "https://docs.google.com/document/d/163di4K3TfQqM-zqEc7IrxB7SCnhiZPn0pK-fbQrIftQ/preview",
+              width = "100%",
+              height = "800px",
+              style = "border: none;"
+            )
+          )
+        )
+),
+
+# --------------------------------------------------
+# FAQs Tab: Frequently Asked Questions (Embedded Google Doc)
+# --------------------------------------------------
+tabItem(tabName = "FAQs",
+        fluidRow(
+          div(
+            style = "padding: 20px; text-align: center; font-size: 18px;",
+            tags$p(tags$strong("Frequently Asked Questions - FAQs")),
+            tags$iframe(
+              src = "https://docs.google.com/document/d/1F0CrXoXABLvmHDQO3ChrjtR_u9g7Zz5K4tzziCTsqEQ/preview",
+              width = "100%",
+              height = "800px",
+              style = "border: none;"
+            )
+          )
+         )
+        )
       )
-)
     )
+  )
 )
-)
-
-
 
 # =============================================
 # Server Logic - Open Science Initiatives Dashboard
@@ -1398,12 +1236,6 @@ tabItem(tabName = "by_country",
 server <- function(input, output, session) {
   
   
-  # observe({
-  #   print(paste0("nav_to: ", input$nav_to))
-  # })
-  # observeEvent(input$nav_to, {
-  #   updateTabItems(session, "tabs", selected = input$nav_to)
-  # })
   observeEvent(input$goto_by_category, {
     updateTabItems(session, "tabs", "by_category")
   })
@@ -1434,11 +1266,12 @@ server <- function(input, output, session) {
   observeEvent(input$goto_faqs, {
     updateTabItems(session, "tabs", "FAQs")
   })
+  observeEvent(input$go_overview, {
+    updateTabItems(session, inputId = "tabs", selected = "overview")
+  })
   
   
-
-  
-  # Render the GEMASS logo image in the sidebar
+  # Render the OPENIT logo image in the sidebar
   output$logo_image <- renderImage({
     list(
       src = "www/logo.png",          # Path to the logo image
@@ -1479,7 +1312,7 @@ server <- function(input, output, session) {
   # Render the category distribution plot with Plotly
   output$category_plot <- renderPlotly({
     cat_data <- plotted_categories()
-    
+
     p <- ggplot(cat_data, aes(x = Category_label, y = count, fill = Category)) +
       geom_bar(stat = "identity", show.legend = FALSE) +
       geom_text(aes(label = count), vjust = 3, size = 4.5, fontface = "bold", color = "black") +
@@ -1496,10 +1329,11 @@ server <- function(input, output, session) {
         y = "Number of Initiatives",
         title = "Number of Initiatives by Category"
       )
-    
+
     ggplotly(p, tooltip = "none", source = "select_bar")
   })
   
+
   # Detect and handle click events on the Plotly bar chart
   observeEvent(event_data("plotly_click", source = "select_bar"), {
     click_data <- event_data("plotly_click", source = "select_bar")
@@ -1540,8 +1374,16 @@ server <- function(input, output, session) {
   output$initiatives_table <- DT::renderDataTable({
     filtered_data <- data_reactive() %>% filter(Category == selected_category())
     DT::datatable(
-      filtered_data %>% select(OrgName, Category, Country, CommunityGovernance, Nonprofit, OpenSource),
-      options = list(pageLength = 5, autoWidth = TRUE),
+      filtered_data %>% 
+        select(OrgName, Category, Country, 
+               CommunityGovernance, Nonprofit, OpenSource),
+      # extensions = c('Buttons', 'Scroller'),
+      options = list(pageLength = 5, 
+                     autoWidth = FALSE ,        
+                     scrollX = TRUE #,
+                     # dom = 'Bfrtip',
+                     # buttons = c('copy', 'csv', 'excel')
+                     ),
       rownames = FALSE
     )
   })
@@ -1768,182 +1610,97 @@ server <- function(input, output, session) {
     cat("✅ Clusters updated in Google Sheet.\n")
   })
   
-  # #############################
-  # output$monitoring_table <- DT::renderDataTable({
-  #   df <- monitoring_data()
-  # 
-  #   # Lien cliquable avec icône
-  #   df$Link <- ifelse(
-  #     is.na(df$Link) | df$Link == "",
-  #     "",
-  #     paste0("<a href='", df$Link, "' target='_blank'><i class='fa fa-external-link-alt'></i> Visit</a>")
-  #   )
-  # 
-  #   # Badges de type
-  #   df$Type <- case_when(
-  #     df$Type == "National" ~ "<span class='badge badge-primary'>National</span>",
-  #     df$Type == "International" ~ "<span class='badge badge-success'>International</span>",
-  #     df$Type == "Funder" ~ "<span class='badge badge-warning'>Funder</span>",
-  #     df$Type == "Institutional" ~ "<span class='badge badge-info'>Institution</span>",
-  #     df$Type == "Publisher" ~ "<span class='badge badge-danger'>Publisher</span>",
-  #     df$Type == "Specialised" ~ "<span class='badge badge-secondary'>Specialised</span>",
-  #     TRUE ~ as.character(df$Type)
-  #   )
-  # 
-  #   DT::datatable(
-  #     df,
-  #     escape = FALSE,
-  #     rownames = FALSE,
-  #     options = list(
-  #       pageLength = 10,
-  #       autoWidth = TRUE,
-  #       dom = 'Bfrtip',
-  #       buttons = c('copy', 'csv', 'excel'),
-  #       columnDefs = list(
-  #         list(className = 'dt-center', targets = "_all"),
-  #         list(width = '25%', targets = 0),  # Initiative
-  #         list(width = '20%', targets = 1),  # Type
-  #         list(width = '20%', targets = 2),  # Link
-  #         list(width = '55%', targets = 3)   # Description
-  #       )
-  #     ),
-  #     #class = 'cell-border stripe hover nowrap'
-  #     class = 'display nowrap compact stripe'
-  #   )
-  # })
-  # 
-  # # #################################################
-  # #################################################
-  # output$focus_table <- DT::renderDataTable({
-  #   df <- df_focus()
-  #   
-  #   # Drapeaux sous forme d’image
-  #   df$`Country/Region` <- ifelse(
-  #     is.na(df$Flag) | df$Flag == "",
-  #     df$`Country/Region`,
-  #     paste0("<img src='", df$Flag, "' width='24' style='margin-right:6px;'>", df$`Country/Region`)
-  #   )
-  #   
-  #   # Lien stylisé
-  #   df$Link <- ifelse(
-  #     is.na(df$Link) | df$Link == "",
-  #     "",
-  #     paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
-  #   )
-  #   
-  #   df <- df %>% select(Initiative, `Country/Region`, Group, Type, Description, Link)
-  #   
-  #   df$Type <- dplyr::case_when(
-  #     df$Type == "National policy" ~ "<span class='badge badge-primary'>National policy</span>",
-  #     df$Type == "National dashboard" ~ "<span class='badge badge-info'>National dashboard</span>",
-  #     df$Type == "Funding / Coordination" ~ "<span class='badge badge-success'>Funding</span>",
-  #     df$Type == "Funding programme" ~ "<span class='badge badge-success'>Funding</span>",
-  #     df$Type == "Infrastructure" ~ "<span class='badge badge-dark'>Infrastructure</span>",
-  #     df$Type == "Information system" ~ "<span class='badge badge-warning'>Info system</span>",
-  #     df$Type == "National programme" ~ "<span class='badge badge-primary'>Programme</span>",
-  #     df$Type == "International initiative" ~ "<span class='badge badge-secondary'>International</span>",
-  #     df$Type == "Publication platform" ~ "<span class='badge badge-purple'>Platform</span>",
-  #     df$Type == "Monitoring" ~ "<span class='badge badge-danger'>Monitoring</span>",
-  #     TRUE ~ as.character(df$Type)
-  #   )
-  #   
-  #   
-  #   DT::datatable(
-  #     df,
-  #     escape = FALSE,
-  #     rownames = FALSE,
-  #     extensions = 'Responsive',
-  #     options = list(
-  #       pageLength = 10,
-  #       autoWidth = TRUE,
-  #       responsive = TRUE,
-  #       columnDefs = list(
-  #         list(className = 'dt-left', targets = "_all"),
-  #         list(width = '10%', targets = 0),
-  #         list(width = '10%', targets = 1),
-  #         list(width = '10%', targets = 2),
-  #         list(width = '15%', targets = 3),
-  #         list(width = '40%', targets = 4, className = 'wrap-text'),
-  #         list(width = '10%', targets = 5)
-  #       )
-  #     ),
-  #     class = 'display nowrap compact stripe'
-  #   )
-  # }) 
-
-  # Palette pastel pour badges
+  # --------------------------------------------------
+  # Generate a pastel color palette for badges
+  # --------------------------------------------------
   generate_color_palette <- function(n) {
+    # Generate 'n' distinct hues evenly spaced around the color wheel
     hues <- seq(15, 375, length = n + 1)
+    # Return HCL-based pastel colors
     grDevices::hcl(h = hues, l = 65, c = 100)[1:n]
   }
   
-  # Fonction pour colorer automatiquement les catégories de type
+  # --------------------------------------------------
+  # Create colored HTML badges for categorical types
+  # --------------------------------------------------
   create_colored_badge_column <- function(type_vector) {
-    unique_types <- unique(type_vector)
-    colors <- generate_color_palette(length(unique_types))
-    names(colors) <- unique_types
-    badges <- paste0("<span class='badge' style='background-color:", colors[type_vector], ";'>", type_vector, "</span>")
+    unique_types <- unique(type_vector)                      # Identify unique categories
+    colors <- generate_color_palette(length(unique_types))   # Generate one color per category
+    names(colors) <- unique_types                            # Assign names to the palette
+    # Create an HTML <span> badge for each element in the type vector
+    badges <- paste0(
+      "<span class='badge' style='background-color:", 
+      colors[type_vector], 
+      ";'>", 
+      type_vector, 
+      "</span>"
+    )
     return(badges)
   }
   
-  
+  # --------------------------------------------------
+  # Monitoring Table: National/Global Monitoring Initiatives
+  # --------------------------------------------------
   output$monitoring_table <- DT::renderDataTable({
     df <- monitoring_data()
     
-    # Lien stylisé
+    # Add stylized HTML link buttons to the 'Link' column
     df$Link <- ifelse(
       is.na(df$Link) | df$Link == "",
       "",
       paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
     )
     
-    # Color badge automatique
+    # Replace 'Type' column with colored badges
     df$Type <- create_colored_badge_column(df$Type)
     
-    # Datatable
+    # Render datatable
     DT::datatable(
       df %>% select(Initiative, Type, Link, Description),
-      escape = FALSE,
-      rownames = FALSE,
+      escape = FALSE,                      # Allow rendering of HTML in cells
+      rownames = FALSE,                    # Remove row indices
       extensions = c('Buttons', 'Scroller'),
       options = list(
-        pageLength = 10,
-        scrollX = TRUE,
-        dom = 'Bfrtip',
+        pageLength = 10,                  # Show 10 rows per page
+        scrollX = TRUE,                   # Enable horizontal scrolling
+        dom = 'Bfrtip',                   # Show buttons (copy, CSV, Excel)
         buttons = c('copy', 'csv', 'excel'),
         columnDefs = list(
           list(className = 'dt-left', targets = "_all"),
-          list(width = '25%', targets = 0),
-          list(width = '15%', targets = 1),
-          list(width = '10%', targets = 2),
-          list(width = '50%', targets = 3, className = 'wrap-text')
+          list(width = '25%', targets = 0),  # Initiative
+          list(width = '15%', targets = 1),  # Type
+          list(width = '10%', targets = 2),  # Link
+          list(width = '50%', targets = 3, className = 'wrap-text')  # Description
         )
       ),
       class = 'display nowrap compact stripe'
     )
   })
   
+  # --------------------------------------------------
+  # Focus Table: Initiatives by Country/Region
+  # --------------------------------------------------
   output$focus_table <- DT::renderDataTable({
     df <- df_focus()
     
-    # Drapeau dans pays
+    # Add country flag icons in the 'Country/Region' column
     df$`Country/Region` <- ifelse(
       is.na(df$Flag) | df$Flag == "",
       df$`Country/Region`,
       paste0("<img src='", df$Flag, "' width='24' style='margin-right:6px;'>", df$`Country/Region`)
     )
     
-    # Lien stylisé
+    # Stylized HTML link buttons
     df$Link <- ifelse(
       is.na(df$Link) | df$Link == "",
       "",
       paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
     )
     
-    # Badge coloré dynamique
+    # Colored badge for type
     df$Type <- create_colored_badge_column(df$Type)
     
-    # Affichage table
+    # Render datatable
     DT::datatable(
       df %>% select(Initiative, `Country/Region`, Group, Type, Description, Link),
       escape = FALSE,
@@ -1956,19 +1713,17 @@ server <- function(input, output, session) {
         buttons = c('copy', 'csv', 'excel'),
         columnDefs = list(
           list(className = 'dt-left', targets = "_all"),
-          list(width = '15%', targets = 0),
-          list(width = '15%', targets = 1),
-          list(width = '10%', targets = 2),
-          list(width = '15%', targets = 3),
-          list(width = '35%', targets = 4, className = 'wrap-text'),
-          list(width = '10%', targets = 5)
+          list(width = '15%', targets = 0),  # Initiative
+          list(width = '15%', targets = 1),  # Country/Region
+          list(width = '10%', targets = 2),  # Group
+          list(width = '15%', targets = 3),  # Type
+          list(width = '35%', targets = 4, className = 'wrap-text'),  # Description
+          list(width = '10%', targets = 5)   # Link
         )
       ),
       class = 'display nowrap compact stripe'
     )
   })
-  
-  
 }
 
 
