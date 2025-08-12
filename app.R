@@ -59,17 +59,17 @@ download_data <- function() {
 data <- download_data()
 
 # Set row names for the data frame to be the organization names
-row.names(data) <- data$OrgName2
+row.names(data) <- data$Abbreviated_OrgName
 
 #######################
 # Group Initiatives by Country
 #######################
 # Group data by country and summarize by counting the number of initiatives
 initiatives_par_pays <- data %>%
-  group_by(Country, adm0_a3, Latitude, Longitude) %>%
+  group_by(Country, ISO3, Latitude, Longitude) %>%
   summarise(
     nb = n(),  # Count number of initiatives per country
-    liste_initiatives = paste(OrgName2, collapse = "<br>"),  # Concatenate organization names
+    liste_initiatives = paste(Abbreviated_OrgName, collapse = "<br>"),  # Concatenate organization names
     .groups = "drop"  # Drop the grouping structure
   )
 
@@ -79,28 +79,28 @@ pal <- colorNumeric("plasma", domain = initiatives_par_pays$nb)
 #######################
 # Prepare Data for Community Governance Visualization
 #######################
-# Step 1 Group initiatives by country and governance type, and count occurrences
-data_pie <- data %>%
-  count(adm0_a3, CommunityGovernance, name = "nb_cg") %>%
-  group_by(adm0_a3, CommunityGovernance) %>%  
-  summarise(nb_cg = sum(nb_cg), .groups = "drop")  # Aggregate counts for governance types
+# 1. Concatène les initiatives par pays et par type Yes/No
+list_initiatives_cg <- data %>%
+  group_by(ISO3, Country, Longitude, Latitude, CommunityGovernance) %>%
+  summarise(
+    list_initiatives = paste(unique(Abbreviated_OrgName), collapse = "<br>"),
+    nb_cg = n(),
+    .groups = "drop"
+  )
 
-# Step 2 Select coordinates for countries
-data_coord <- data %>%
-  select(adm0_a3, Country, Longitude, Latitude) %>%
-  unique()  # Remove duplicate coordinates
+# 2. Met en forme large pour avoir colonnes Yes et No pour listes et nombres
+data_cg_wide <- list_initiatives_cg %>%
+  pivot_wider(
+    id_cols = c(ISO3, Country, Longitude, Latitude),
+    names_from = CommunityGovernance,
+    values_from = c(nb_cg, list_initiatives),
+    values_fill = list(nb_cg = 0, list_initiatives = "No initiative")
+  )
 
-# Step 3 Join the governance data with country coordinates
-data_pie <- data_pie %>%
-  right_join(data_coord, by = "adm0_a3") %>%  # Properly join the data by country code
-  replace_na(list(nb_cg = 0, CommunityGovernance = "No")) %>%  # Handle missing values
-  filter(!is.na(Longitude)) %>%  # Remove countries without coordinates
-  select(Country, Longitude, Latitude, CommunityGovernance, nb_cg) %>% 
-  pivot_wider(names_from = CommunityGovernance, values_from = nb_cg, values_fill = list(nb_cg = 0)) %>%  # Reshape data for pie chart
-  st_drop_geometry()  # Remove geometry column if present
+# 3. Nettoyage noms colonnes (optionnel)
+names(data_cg_wide) <- gsub("nb_cg_", "", names(data_cg_wide))
+names(data_cg_wide) <- gsub("list_initiatives_", "list_", names(data_cg_wide))
 
-# Step 4 Check and remove unnecessary columns
-data_pie <- data_pie %>% select(-any_of("0"))  # Remove any column named "0" (if it exists)
 
 #######################
 # Perform Multiple Correspondence Analysis (MCA)
@@ -108,12 +108,14 @@ data_pie <- data_pie %>% select(-any_of("0"))  # Remove any column named "0" (if
 # Function to perform MCA (Correspondence Analysis)
 perform_mca <- function(data) {
   d <- data %>%
-    select(OrgName2, Nonprofit, Category, CommunityGovernance) %>%
+    select(Abbreviated_OrgName, Nonprofit, Category, CommunityGovernance) %>%
     mutate(across(everything(), as.factor))  # Convert columns to factors for MCA
- 
-  row.names(d) <- d$OrgName2
+  
+  d$Abbreviated_OrgName <- substr(d$Abbreviated_OrgName, 1, 35)
+  
+  row.names(d) <- d$Abbreviated_OrgName
 
-  d <- d %>% select(-OrgName2)
+  d <- d %>% select(-Abbreviated_OrgName)
   
   acm <- dudi.acm(d, scannf = FALSE, nf = Inf)  # Perform MCA (ACM in R)
   list(acm = acm, d = d)  # Return results
@@ -135,7 +137,7 @@ arbre_phi2 <- perform_clustering(acm)
 #######################
 # Assign Clusters Based on Hierarchical Clustering
 #######################
-data$cluster <- cutree(arbre_phi2, 6)  # Cut the dendrogram into 6 clusters
+data$cluster <- cutree(arbre_phi2, 10)  # Cut the dendrogram into 7 clusters
 
 
 #######################
@@ -143,7 +145,7 @@ data$cluster <- cutree(arbre_phi2, 6)  # Cut the dendrogram into 6 clusters
 #######################
 popup_css <- "
 .custom-popup .leaflet-popup-content {
-  max-height: 150px;
+  max-height: 250px;
   overflow-y: auto;
 }
 "
@@ -208,7 +210,27 @@ ui <- tagList(
           class = "btn btn-outline-light",
           style = "margin-top: 8px; margin-right: 12px; padding: 4px 8px; font-size: 13px;"
         )
+      ),
+      
+      tags$li(
+        class = "dropdown",
+        style = "display: flex; gap: 15px; align-items: center; margin-left: 10px;",
+        tags$a(
+          id = "share_linkedin",
+          href = "#",
+          target = "_blank",
+          style = "background-color: white; color: #0077b5; font-size: 20px; padding: 7px; border-radius: 50% 0 0 50%;",
+          icon("linkedin")
+        ),
+        tags$a(
+          id = "share_bluesky",
+          href = "#",
+          target = "_blank",
+          style = "background-color: white; color: #1da1f2; font-size: 20px; padding: 7px; border-radius: 0 50% 50% 0;",
+          icon("bluesky")  
+        )
       )
+      
     ),
     
     #===========================
@@ -223,13 +245,14 @@ ui <- tagList(
         
         # 2. Explore Section
         menuItem("Explore Initiatives", icon = icon("map"),
-                 menuSubItem("By Category", tabName = "by_category"),
-                 menuSubItem("By Country / Region", tabName = "by_country")
+                 menuSubItem("By Country / Region", tabName = "by_country"),
+                 menuSubItem("By Category", tabName = "by_category")
+                 
         ),
         
         # 3. Analytical Section
-        menuItem("Analytical Insights", icon = icon("project-diagram"),
-                 menuSubItem("MCA – Correspondence Analysis", tabName = "mca"),
+        menuItem("Analyze Structure", icon = icon("project-diagram"),
+                 menuSubItem("Correspondence Analysis", tabName = "mca"),
                  menuSubItem("Typology – Clustering", tabName = "hcpc")
         ),
         
@@ -242,6 +265,7 @@ ui <- tagList(
         # 5. Contribution & Data
         menuItem("Contribute & Data", icon = icon("users"),
                  menuSubItem("Suggest Initiative", tabName = "add_initiative"),
+                 menuSubItem("Report an error", tabName = "report_error"),
                  menuSubItem("Download Dataset", tabName = "download_data"),
                  menuSubItem("Source Code (GitHub)", 
                              href = "https://github.com/abdelghani-maddi/osinit", 
@@ -413,6 +437,9 @@ ui <- tagList(
             height: 50px !important;
           }
         "))
+        
+        
+        
         ),
 
 
@@ -453,23 +480,23 @@ tabItems(
               # Centered total initiatives count + action buttons
               tags$div(
                 style = "text-align: center; padding-bottom: 40px;",
-                
+
                 tags$i(class = "fa fa-satellite-dish", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
-                
+
                 tags$div(
                   style = "font-size: 100px; font-weight: bold; color: #007bff;",
                   textOutput("distinct_initiatives")
                 ),
-                
+
                 tags$div(
                   style = "font-size: 25px; font-weight: bold; color: #333;",
                   "Total number of initiatives included"
                 ),
-                
+
                 # Two call-to-action buttons
                 tags$div(
                   style = "margin-top: 25px;",
-                  
+
                   tags$a(
                     href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit#gid=1136935931",
                     target = "_blank",
@@ -478,7 +505,7 @@ tabItems(
                     style = "color: #ffffff; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
                        background-color: #007bff; border-radius: 12px; font-size: 16px; font-weight: 500;"
                   ),
-                  
+
                   tags$a(
                     href = "https://forms.gle/ZSnK9XkaVMBnKfPS6",
                     target = "_blank",
@@ -486,6 +513,15 @@ tabItems(
                     "Suggest New Initiative",
                     style = "color: #000000; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
                        background-color: #aaff66; border-radius: 12px; font-size: 16px; font-weight: 500;"
+                  ),
+                  
+                  tags$a(
+                    href = "https://docs.google.com/forms/d/1iDJp9iMNSfG2ur47i6122QphXxssL34-my_m2vDusoI/preview",
+                    target = "_blank",
+                    icon("exclamation-triangle", class = "me-2"),
+                    "Report an Error",
+                    style = "color: #ffffff; text-decoration: none; display: inline-block; margin: 10px; padding: 12px 20px;
+                      background-color: #ff6961; border-radius: 12px; font-size: 16px; font-weight: 500;"
                   )
                 )
               )
@@ -534,7 +570,7 @@ tabItems(
                 class = "interactive-section-box monitor-box section-main",
                 tags$i(class = "fas fa-balance-scale section-icon"),
                 div(class = "section-title", "Monitoring Framework"),
-                div(class = "section-subtitle", "OSMI Principles & Landscape"),
+                div(class = "section-subtitle", "OSMI principles & landscape"),
                 div(class = "section-hover-menu",
                     actionButton("goto_principles", "OSMI Principles", class = "btn-explore"),
                     actionButton("goto_monitoring", "Monitoring Landscape", class = "btn-explore")
@@ -555,12 +591,16 @@ tabItems(
                 class = "interactive-section-box contribute-box section-main",
                 tags$i(class = "fas fa-plus-circle section-icon"),
                 div(class = "section-title", "Contribute"),
-                div(class = "section-subtitle", "Add or enrich initiatives"),
+                div(class = "section-subtitle", "Add initiatives / Report an error"),
                 div(class = "section-hover-menu",
-                    actionButton("goto_add_initiative", "Suggest Initiative", class = "btn-explore")
+                    actionButton("goto_add_initiative", "Suggest Initiative", class = "btn-explore"),
+                    actionButton("goto_report_error", "Report an Error", class = "btn-explore")
+                    
                 )
               )
             ),
+            
+
             
             # DATASET BOX
             column(
@@ -571,10 +611,21 @@ tabItems(
                 div(class = "section-title", "Dataset Access"),
                 div(class = "section-subtitle", "View or download the full dataset"),
                 div(class = "section-hover-menu",
-                    actionButton("goto_download_data", "Access Dataset", class = "btn-explore")
+                    
+                    # Bouton pour accéder au dataset 
+                    actionButton("goto_download_data", "Access Dataset", class = "btn-explore"),
+                    
+                    # Lien direct vers le code source sur GitHub
+                    tags$a(
+                      href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",  
+                      target = "_blank",
+                      class = "btn-explore",
+                      "Source code (Github)"
+                    )
                 )
               )
             ),
+            
             
             # ABOUT BOX
             column(
@@ -582,7 +633,7 @@ tabItems(
               div(
                 class = "interactive-section-box about-box section-main",
                 tags$i(class = "fas fa-info-circle section-icon"),
-                div(class = "section-title", "About"),
+                div(class = "section-title", "Resources"),
                 div(class = "section-subtitle", "Project description and FAQs"),
                 div(class = "section-hover-menu",
                     actionButton("goto_about", "About the Project", class = "btn-explore"),
@@ -590,7 +641,32 @@ tabItems(
                 )
               )
             )
+          ),
+          
+          # Bande horizontale claire avec logos cliquables
+          fluidRow(
+            tags$div(
+              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+              
+              # Logos avec liens 
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://open-science-monitoring.org/",
+                target = "_blank",
+                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+              )
+            )
           )
+  
   ),
   
   # --------------------------------------------------
@@ -619,6 +695,38 @@ tabItems(
             )
           )
   ),
+  
+  # --------------------------------------------------
+  # Report error Tab -----
+  # --------------------------------------------------
+  
+  tabItem(tabName = "report_error",
+          fluidRow(
+            box(
+              title = "Report an Error or Suggest a Correction",
+              width = 12,
+              status = "warning",
+              solidHeader = TRUE,
+              
+              # Intro text
+              div(
+                style = "padding: 10px; font-size: 16px;",
+                tags$p("If you find an error or outdated information in the dashboard, please use the form below to report it or suggest a correction."),
+                tags$p("Your feedback helps us keep the data accurate and up-to-date. Thank you!")
+              ),
+              
+              # Embedded Google Form
+              tags$iframe(
+                src = "https://docs.google.com/forms/d/1iDJp9iMNSfG2ur47i6122QphXxssL34-my_m2vDusoI/preview",
+                width = "100%",
+                height = "800px",
+                frameborder = "0",
+                style = "border: none;"
+              )
+            )
+          )
+  ),
+  
   
   # --------------------------------------------------
   # Download Dataset Tab -----
@@ -674,14 +782,13 @@ tabItem(tabName = "by_category",
             status = "info", 
             solidHeader = TRUE, 
             width = 12,
-            
+
             # Interactive Plotly chart
-            plotlyOutput("category_plot"),
+            plotlyOutput("category_plot",  height = "1000px"),
             
             # Description under the plot
             tags$p(
-              "This bar chart provides an overview of the number of initiatives grouped by their focus area. 
-        Hover over each bar to view detailed counts, or click on a bar to explore the specific initiatives within the selected category."
+              "This bar chart provides an overview of the number of initiatives grouped by their focus area. Categories for the focus area are based on the first level of the open science Taxonomy by da Silveira et al. (2023). You can click on a bar to explore the specific initiatives within the selected category."
             )
           )
         ),
@@ -720,11 +827,11 @@ tabItem(tabName = "by_country",
               status = "success",
               solidHeader = TRUE,
               width = NULL,
-              
+
               # Leaflet interactive map
               leafletOutput("world_map"),
               
-              # Apply custom popup CSS (defined elsewhere)
+              # Apply custom popup CSS 
               tags$style(HTML(popup_css)),
               
               # Descriptive paragraph below the map
@@ -903,20 +1010,23 @@ tabItem(tabName = "principles",
                  
                  # Main section container
                  div(class = "principle-section",
-                     
-                     # Header with title and OSMI logo
+                
+                   div(
+                     style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; 
+          display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
                      div(
-                       style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; 
-                   display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
-                       div(
-                         style = "flex: 1; min-width: 250px;",
-                         div(class = "principle-title-main", "Principles of Open Science Monitoring"),
-                         div(class = "principle-subtitle", 
-                             "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
-                       ),
-                       tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
+                       style = "flex: 1; min-width: 250px;",
+                       div(class = "principle-title-main", "Principles of Open Science Monitoring"),
+                       div(class = "principle-subtitle", 
+                           "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
                      ),
-                     
+                     tags$a(
+                       href = "https://open-science-monitoring.org/",
+                       target = "_blank",  
+                       tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
+                     )
+                   ),
+                   
                      br(),
                      
                      # ----- Accordion 1: Relevance and Significance -----
@@ -999,6 +1109,44 @@ tabItem(tabName = "principles",
 # --------------------------------------------------
 tabItem(tabName = "mca",
         fluidRow(
+          # ---- MCA Plot: By Category ----
+          column(width = 7.5,
+                 box(
+                   title = "Multiple Correspondence Analysis (MCA): Category",
+                   status = "primary",
+                   solidHeader = TRUE,
+                   width = 12,
+                   uiOutput("mca_plot_ui2"),
+                   tags$p(
+                     "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
+                   )
+                 )
+          ),
+          
+          # ---- MCA Interpretation: By Category ----
+          column(width = 4.5,
+                 box(
+                   title = "How to Interpret the MCA Plot (Category)",
+                   status = "info",
+                   solidHeader = TRUE,
+                   width = 12,
+                   tags$div(
+                     style = "font-size: 15px; line-height: 1.6;",
+                     tags$p("This plot shows the same MCA projection, but colored by the main category of each initiative."),
+                     tags$ul(
+                       tags$li(tags$b("What is plotted:"), "Each point is an open science initiative, projected based on their categorical characteristics."),
+                       tags$li(tags$b("Color coding:"), "Initiatives are colored according to their assigned category, allowing for visual comparison between types of services or platforms."),
+                       tags$li(tags$b("Interpretation:"), "Initiatives from the same category may appear grouped together if they share common traits. Conversely, scattered colors within a region may indicate overlapping features between categories."),
+                       tags$li(tags$b("Axes:"), "As in the previous plot, the axes represent the two main MCA dimensions, providing a simplified structure of multivariate associations."),
+                       tags$li(tags$b("Goal:"), "This visualization supports the identification of functional or organizational similarities between initiatives, beyond their declared category.")
+                     ),
+                     tags$p("This view highlights the internal diversity or homogeneity within categories, and helps detect hybrid initiatives that span multiple functions.")
+                   )
+                 )
+          )
+        ),
+
+        fluidRow(
           # ---- MCA Plot: NonProfit Status ----
           column(width = 7.5,
                  box(
@@ -1033,46 +1181,8 @@ tabItem(tabName = "mca",
                    )
                  )
           )
-        ),
-        
-        fluidRow(
-          # ---- MCA Plot: By Category ----
-          column(width = 7.5,
-                 box(
-                   title = "Multiple Correspondence Analysis (MCA): Category",
-                   status = "primary",
-                   solidHeader = TRUE,
-                   width = 12,
-                   uiOutput("mca_plot_ui2"),
-                   tags$p(
-                     "This plot presents the results of a Multiple Correspondence Analysis (MCA), highlighting the first two dimensions and grouping initiatives by category."
-                   )
-                 )
-          ),
-          
-          # ---- MCA Interpretation: By Category ----
-          column(width = 4.5,
-                 box(
-                   title = "How to Interpret the MCA Plot (Category)",
-                   status = "info",
-                   solidHeader = TRUE,
-                   width = 12,
-                   tags$div(
-                     style = "font-size: 15px; line-height: 1.6;",
-                     tags$p("This plot shows the same MCA projection, but colored by the main category of each initiative (e.g., publishing platform, repository, infrastructure)."),
-                     tags$ul(
-                       tags$li(tags$b("What is plotted:"), "Each point is an open science initiative, projected based on their categorical characteristics."),
-                       tags$li(tags$b("Color coding:"), "Initiatives are colored according to their assigned category, allowing for visual comparison between types of services or platforms."),
-                       tags$li(tags$b("Interpretation:"), "Initiatives from the same category may appear grouped together if they share common traits. Conversely, scattered colors within a region may indicate overlapping features between categories."),
-                       tags$li(tags$b("Axes:"), "As in the previous plot, the axes represent the two main MCA dimensions, providing a simplified structure of multivariate associations."),
-                       tags$li(tags$b("Goal:"), "This visualization supports the identification of functional or organizational similarities between initiatives, beyond their declared category.")
-                     ),
-                     tags$p("This view highlights the internal diversity or homogeneity within categories, and helps detect hybrid initiatives that span multiple functions.")
-                   )
-                 )
-          )
         )
-),
+),    
 
 # --------------------------------------------------
 # HCPC Tab: Hierarchical Clustering -----
@@ -1086,7 +1196,7 @@ tabItem(tabName = "hcpc",
                    status = "danger",
                    solidHeader = TRUE,
                    width = 12,
-                   plotlyOutput("dendrogram", height = "2000px"),
+                   plotlyOutput("dendrogram", height = "5000px"),
                    tags$p(
                      "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
                    )
@@ -1235,6 +1345,47 @@ tabItem(tabName = "FAQs",
 
 server <- function(input, output, session) {
   
+  # 1. Lecture du paramètre ?tab=... au chargement
+  observe({
+    query <- parseQueryString(session$clientData$url_search)
+    if (!is.null(query$tab)) {
+      updateTabItems(session, "tabs", selected = query$tab)
+    }
+  })
+
+  # 2. Mise à jour de l'URL quand l’utilisateur change d’onglet
+  observeEvent(input$tabs, {
+    updateQueryString(
+      paste0("?tab=", input$tabs),
+      mode = "replace",  # "replace" pour ne pas ajouter à l'historique
+      session = session
+    )
+  })
+  
+  # URL fixe (sans paramètre tab)
+  url_clean <- "https://amcm.shinyapps.io/openit/"
+  
+  observe({
+    # Construire URL de partage LinkedIn
+    linkedin_share <- paste0(
+      "https://www.linkedin.com/sharing/share-offsite/?url=", 
+      URLencode(url_clean)
+    )
+    
+    # Construire URL de partage Bluesky (ou autre service)
+    bluesky_share <- paste0(
+      "https://bsky.app/intent/compose?text=", 
+      URLencode(url_clean)
+    )
+    
+    # Mettre à jour les liens dans l'UI via JS
+    session$sendCustomMessage("updateLinks", list(
+      linkedin = linkedin_share,
+      bluesky = bluesky_share
+    ))
+  })
+  
+  
   
   observeEvent(input$goto_by_category, {
     updateTabItems(session, "tabs", "by_category")
@@ -1256,6 +1407,9 @@ server <- function(input, output, session) {
   })
   observeEvent(input$goto_add_initiative, {
     updateTabItems(session, "tabs", "add_initiative")
+  })
+  observeEvent(input$goto_report_error, {
+    updateTabItems(session, "tabs", "report_error")
   })
   observeEvent(input$goto_download_data, {
     updateTabItems(session, "tabs", "download_data")
@@ -1291,7 +1445,7 @@ server <- function(input, output, session) {
   # Output: display the number of distinct initiatives in the UI
   output$distinct_initiatives <- renderText({
     data <- data_reactive()  # Get the latest data snapshot
-    n_distinct(data$OrgName2)  # Count distinct initiatives
+    n_distinct(data$Abbreviated_OrgName)  # Count distinct initiatives
   })
   
   # Reactive placeholder for selection handling
@@ -1312,27 +1466,41 @@ server <- function(input, output, session) {
   # Render the category distribution plot with Plotly
   output$category_plot <- renderPlotly({
     cat_data <- plotted_categories()
-
+    
     p <- ggplot(cat_data, aes(x = Category_label, y = count, fill = Category)) +
-      geom_bar(stat = "identity", show.legend = FALSE) +
+      geom_bar(stat = "identity") +
       geom_text(aes(label = count), vjust = 3, size = 4.5, fontface = "bold", color = "black") +
       theme_minimal(base_size = 14) +
       theme(
         axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
         plot.title = element_text(face = "bold", hjust = 0.5),
         axis.title.x = element_text(margin = margin(t = 9)),
-        axis.title.y = element_text(margin = margin(r = 10))
+        axis.title.y = element_text(margin = margin(r = 10)),
+        legend.title = element_blank()
       ) +
       scale_fill_brewer(palette = "Set3") +
       labs(
-        x = "Category",
+        x= "",  #x = "Category",
         y = "Number of Initiatives",
         title = "Number of Initiatives by Category"
       )
-
-    ggplotly(p, tooltip = "none", source = "select_bar")
+    
+    ggplotly(p, tooltip = "none", source = "select_bar") %>%
+      layout(
+        legend = list(
+          orientation = "h",
+          x = 0,         # à gauche 
+          y = -0.35,         # bas de la zone graphique
+          xanchor = "left",
+          yanchor = "bottom",
+          font = list(size = 12),
+          itemwidth = 50
+        ),
+        margin = list(b = 150)  # marge assez grande en bas pour que la légende ne soit pas coupée
+      )
+    
   })
-  
+
 
   # Detect and handle click events on the Plotly bar chart
   observeEvent(event_data("plotly_click", source = "select_bar"), {
@@ -1378,7 +1546,7 @@ server <- function(input, output, session) {
         select(OrgName, Category, Country, 
                CommunityGovernance, Nonprofit, OpenSource),
       # extensions = c('Buttons', 'Scroller'),
-      options = list(pageLength = 5, 
+      options = list(pageLength = 25, 
                      autoWidth = FALSE ,        
                      scrollX = TRUE #,
                      # dom = 'Bfrtip',
@@ -1389,10 +1557,10 @@ server <- function(input, output, session) {
   })
   
   # Render the world map with circle markers representing initiative counts
-  output$world_map <- renderLeaflet({
+   output$world_map <- renderLeaflet({
     data <- data_reactive()
     
-    map <- leaflet(initiatives_par_pays) %>%
+    map <- leaflet(initiatives_par_pays, options = leafletOptions(minZoom = 2)) %>%
       addTiles() %>%
       addCircleMarkers(
         lng = ~Longitude, lat = ~Latitude,
@@ -1416,59 +1584,110 @@ server <- function(input, output, session) {
         lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
         lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
         zoom = 2
-      )
+      ) %>%
+      setMaxBounds(lng1 = -180, lat1 = -85, lng2 = 180, lat2 = 85)  # Empêche le scroll infini
+    
+    map
   })
   
-  # Render the governance map with pie charts
-  output$comm_gov <- renderLeaflet({
-    data <- data_reactive()
-    
-    map <- leaflet() %>%
-      addTiles() %>%
-      addMinicharts(
-        lng = data_pie$Longitude, lat = data_pie$Latitude,
-        type = "pie",
-        chartdata = data_pie[, c("Yes", "No")],
-        colorPalette = c("blue", "red"),
-        width = 30, height = 30,
-        opacity = 0.8
-      ) %>%
-      setView(
-        lng = mean(initiatives_par_pays$Longitude, na.rm = TRUE),
-        lat = mean(initiatives_par_pays$Latitude, na.rm = TRUE),
-        zoom = 2
-      )
-  })
+  
+   output$comm_gov <- renderLeaflet({
+     data <- data_reactive()
+     
+     df <- data_cg_wide
+     
+     leaflet(df, options = leafletOptions(minZoom = 2)) %>%
+       addTiles() %>%
+       addMinicharts(
+         lng = df$Longitude, lat = df$Latitude,
+         type = "pie",
+         chartdata = df[, c("Yes", "No")],
+         colorPalette = c("blue", "red"),
+         width = 30, height = 30,
+         opacity = 0.8
+       ) %>%
+       addCircleMarkers(
+         lng = df$Longitude, lat = df$Latitude,
+         radius = 10,
+         color = "transparent", fillOpacity = 0, opacity = 0,
+         popup = ~paste0(
+           "<div style='font-family: Arial, sans-serif; font-size: 14px;'>",
+           
+           # Titre : pays
+           "<h4 style='margin: 0 0 8px 0;'>", Country, "</h4>",
+           
+           # Tableau avec deux parties : en haut le résumé, en bas les listes
+           "<table style='border-collapse: collapse; width: 250px;'>",
+           
+           # Ligne entête
+           "<thead>",
+           "<tr style='background-color: #4a90e2; color: white;'>",
+           "<th style='border: 1px solid #ddd; padding: 8px; text-align: center;'>Yes</th>",
+           "<th style='border: 1px solid #ddd; padding: 8px; text-align: center;'>No</th>",
+           "</tr>",
+           "</thead>",
+           
+           # Ligne résumé avec les nombres
+           "<tbody>",
+           "<tr style='background-color: #f1f1f1;'>",
+           "<td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>", Yes, "</td>",
+           "<td style='border: 1px solid #ddd; padding: 8px; text-align: center;'>", No, "</td>",
+           "</tr>",
+           
+           # Ligne avec les listes
+           "<tr>",
+           "<td style='border: 1px solid #ddd; padding: 8px; vertical-align: top;'>", list_Yes, "</td>",
+           "<td style='border: 1px solid #ddd; padding: 8px; vertical-align: top;'>", list_No, "</td>",
+           "</tr>",
+           
+           "</tbody>",
+           "</table>",
+           "</div>"
+         ),
+         popupOptions = popupOptions(className = "custom-popup")
+       ) %>%
+       setView(
+         lng = mean(df$Longitude, na.rm = TRUE),
+         lat = mean(df$Latitude, na.rm = TRUE),
+         zoom = 2
+       ) %>%
+       setMaxBounds(lng1 = -180, lat1 = -85, lng2 = 180, lat2 = 85)
+   })
   
   # Reactive computation of MCA (Multiple Correspondence Analysis) results
   mca_results <- reactive({
-    perform_mca(data_reactive())  # Calls your custom MCA computation function
+    perform_mca(data_reactive())  
   })
   
-  # Render the MCA plot for NonProfit dimension
+ 
   output$mca_plot_ui <- renderUI({
     acm_object <- mca_results()$acm
     d <- mca_results()$d
     
-    rownames(acm_object$li) <- rownames(d)  # Sync labels with source data
+    rownames(acm_object$li) <- rownames(d)
     res <- prepare_results(acm_object)
     
-    MCA_ind_plot(res,
-                 xax = 1, yax = 2,
-                 ind_sup = FALSE,
-                 lab_var = "Lab",
-                 ind_lab_min_contrib = 0,
-                 col_var = "Nonprofit",
-                 labels_size = 7,
-                 point_opacity = 0.5,
-                 opacity_var = NULL,
-                 point_size = 64,
-                 ellipses = FALSE,
-                 transitions = TRUE,
-                 labels_positions = "auto",
-                 xlim = c(-2.27, 2.39),
-                 ylim = c(-1.46, 1.5))
+    div(
+      style = "height: 800px;",  
+      MCA_ind_plot(res,
+                   width = "90%", height = "800px",
+                   xax = 1, yax = 2,
+                   ind_sup = FALSE,
+                   lab_var = "Lab",
+                   ind_lab_min_contrib = 0,
+                   col_var = "Nonprofit",
+                   labels_size = 9,
+                   point_opacity = 0.5,
+                   opacity_var = NULL,
+                   point_size = 64,
+                   ellipses = FALSE,
+                   transitions = TRUE,
+                   labels_positions = "auto",
+                   xlim = c(-2.27, 2.39),
+                   ylim = c(-1.46, 1.5))
+    )
   })
+  
   
   # Render the MCA plot for Category dimension
   output$mca_plot_ui2 <- renderUI({
@@ -1478,28 +1697,33 @@ server <- function(input, output, session) {
     rownames(acm_object$li) <- rownames(d)
     res <- explor::prepare_results(acm_object)
     
-    MCA_ind_plot(res,
-                 xax = 1, yax = 2,
-                 ind_sup = FALSE,
-                 lab_var = "Lab",
-                 ind_lab_min_contrib = 0,
-                 col_var = "Category",
-                 labels_size = 7,
-                 point_opacity = 0.5,
-                 opacity_var = NULL,
-                 point_size = 64,
-                 ellipses = FALSE,
-                 transitions = TRUE,
-                 labels_positions = "auto",
-                 xlim = c(-2.27, 2.39),
-                 ylim = c(-1.46, 1.5))
+    div(
+      style = "height: 800px;",  
+      MCA_ind_plot(res,
+                   width = "90%", height = "800px",
+                   xax = 1, yax = 2,
+                   ind_sup = FALSE,
+                   lab_var = "Lab",
+                   ind_lab_min_contrib = 0,
+                   col_var = "Category",
+                   labels_size = 9,
+                   point_opacity = 0.5,
+                   opacity_var = NULL,
+                   point_size = 64,
+                   ellipses = FALSE,
+                   transitions = TRUE,
+                   labels_positions = "auto",
+                   xlim = c(-2.27, 2.39),
+                   ylim = c(-1.46, 1.5))
+    )
   })
+  
   
   # Render the dendrogram for hierarchical clustering
   output$dendrogram <- renderPlotly({
     
     # Nombre de clusters
-    k <- 6
+    k <- 10
     
     # Créer et colorier le dendrogramme
     dend <- as.dendrogram(arbre_phi2)
@@ -1510,7 +1734,7 @@ server <- function(input, output, session) {
     segs <- dend_data$segments
     labels <- dend_data$labels
     
-    # On récupère les couleurs via une astuce :
+    # On récupère les couleurs via une astuce :)
     # color_branches ajoute un attribut "edgePar" avec une couleur sur chaque nœud
     # Il faut "traverser" le dendrogramme pour en extraire l'ordre
     extract_segment_colors <- function(dend) {
@@ -1590,9 +1814,9 @@ server <- function(input, output, session) {
       layout(
         title = "Interactive dendrogram",
         xaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE,
-                     range = c(0, label_offset + 5)),
+                     range = c(0, label_offset + 9)),
         yaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE),
-        margin = list(l = 20, r = 50, t = 50, b = 20)
+        margin = list(l = 20, r = 30, t = 30, b = 20)
       )
     
   })
@@ -1602,7 +1826,7 @@ server <- function(input, output, session) {
     data <- data_reactive()
     
     clustered_data <- data %>%
-      mutate(cluster = cutree(arbre_phi2, k = 6))
+      mutate(cluster = cutree(arbre_phi2, k = 10))
     
     sheet_id <- "1WWY-AFsFY70xf7JgRAZFwjl7tcHcdCplb8QT5bb3-k8"
     write_sheet(clustered_data, ss = sheet_id, sheet = "Clusters")
