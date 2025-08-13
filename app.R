@@ -186,7 +186,12 @@ ui <- tagList(
       .sidebar-menu li:nth-child(6) a:hover { background-color: #288aa7 !important; color: white !important; }
       .sidebar-menu li:nth-child(7) a:hover { background-color: #8aa728 !important; color: white !important; }
       .sidebar-menu li:nth-child(8) a:hover { background-color: #288aa7 !important; color: white !important; }
-    "))
+    ")),
+    
+    tags$meta(property = "og:image", content = "https://amcm.shinyapps.io/openit/overview.png"),
+    tags$meta(property = "og:url", content = "https://amcm.shinyapps.io/openit/"),
+    tags$meta(property = "og:type", content = "website")
+    
   ),
   
   #===========================
@@ -217,14 +222,14 @@ ui <- tagList(
         style = "display: flex; gap: 15px; align-items: center; margin-left: 10px;",
         tags$a(
           id = "share_linkedin",
-          href = "#",
+          href = "https://www.linkedin.com/sharing/share-offsite/?url=https://amcm.shinyapps.io/openit/preview.html",
           target = "_blank",
           style = "background-color: white; color: #0077b5; font-size: 20px; padding: 7px; border-radius: 50% 0 0 50%;",
           icon("linkedin")
         ),
         tags$a(
           id = "share_bluesky",
-          href = "#",
+          href = "https://bsky.app/intent/compose?text=https://amcm.shinyapps.io/openit/preview.html",
           target = "_blank",
           style = "background-color: white; color: #1da1f2; font-size: 20px; padding: 7px; border-radius: 0 50% 50% 0;",
           icon("bluesky")  
@@ -1196,7 +1201,7 @@ tabItem(tabName = "hcpc",
                    status = "danger",
                    solidHeader = TRUE,
                    width = 12,
-                   plotlyOutput("dendrogram", height = "5000px"),
+                   plotlyOutput("dendrogram", height = "6000px"),
                    tags$p(
                      "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
                    )
@@ -1362,28 +1367,6 @@ server <- function(input, output, session) {
     )
   })
   
-  # URL fixe (sans paramètre tab)
-  url_clean <- "https://amcm.shinyapps.io/openit/"
-  
-  observe({
-    # Construire URL de partage LinkedIn
-    linkedin_share <- paste0(
-      "https://www.linkedin.com/sharing/share-offsite/?url=", 
-      URLencode(url_clean)
-    )
-    
-    # Construire URL de partage Bluesky (ou autre service)
-    bluesky_share <- paste0(
-      "https://bsky.app/intent/compose?text=", 
-      URLencode(url_clean)
-    )
-    
-    # Mettre à jour les liens dans l'UI via JS
-    session$sendCustomMessage("updateLinks", list(
-      linkedin = linkedin_share,
-      bluesky = bluesky_share
-    ))
-  })
   
   
   
