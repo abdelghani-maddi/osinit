@@ -172,9 +172,14 @@ ui <- tagList(
   #===========================
   tags$head(
     # Set favicon and page title
-    tags$link(rel = "icon", type = "image/png", 
-              href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
-    tags$title("OS Initiatives Tracker"),
+    # tags$link(rel = "icon", type = "image/png", 
+    #           href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
+    # tags$title("OS Initiatives Tracker"),
+    
+      # # Set favicon and page title
+      tags$link(rel = "icon", type = "image/png", href = "hub6.png"),
+      tags$title("OSMI Hub"),
+
     
     # Custom hover color styles for each sidebar menu item
     tags$style(HTML("
@@ -203,8 +208,8 @@ ui <- tagList(
     # HEADER with App Title + Overview Button
     #===========================
     dashboardHeader(
-      title = tags$strong("Open Science Initiatives Tracker"),
-      titleWidth = 500,
+      title = tags$strong("OSMI Hub"),
+      titleWidth = 230,
       
       # Navigation button: Overview
       tags$li(
@@ -283,24 +288,24 @@ ui <- tagList(
                  menuSubItem("FAQs", tabName = "FAQs")
         ),
         
-        # 7. Logos (external links)
-        tags$li(class = "dropdown", 
-                tags$a(href = "https://www.gemass.fr/contract/openit/", target = "_blank",
-                       tags$img(src = "logo.png", height = "47px", style = "margin: 0px; display: block;")
-                )
-        ),
-        tags$li(class = "dropdown", 
-                tags$a(href = "https://open-science-monitoring.org/", target = "_blank",
-                       tags$img(src = "osmi.png", height = "44px", style = "margin: 0px; display: block;")
-                )
-        ),
+        # # 7. Logos (external links)
+        # tags$li(class = "dropdown", 
+        #         tags$a(href = "https://www.gemass.fr/contract/openit/", target = "_blank",
+        #                tags$img(src = "logo.png", height = "47px", style = "margin: 0px; display: block;")
+        #         )
+        # ),
+        # tags$li(class = "dropdown", 
+        #         tags$a(href = "https://open-science-monitoring.org/", target = "_blank",
+        #                tags$img(src = "osmi.png", height = "44px", style = "margin: 0px; display: block;")
+        #         )
+        # ),
         
         # 8. Logos fixed to bottom of sidebar (ANR + CC-BY)
         tags$div(
           style = "position: absolute; bottom: 20px; left: 10px;",
-          tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
-                 tags$img(src = "logo_ANR.jpg", height = "33px", style = "margin: 5px; display: block;")
-          ),
+          # tags$a(href = "https://anr.fr/Projet-ANR-24-RESO-0001", target = "_blank",
+          #        tags$img(src = "logo_ANR.jpg", height = "33px", style = "margin: 5px; display: block;")
+          # ),
           tags$a(href = "https://creativecommons.org/licenses/by/4.0/deed.fr", target = "_blank",
                  tags$img(src = "CC_BY.png", height = "30px", style = "margin: 5px; display: block;")
           )
@@ -316,9 +321,12 @@ ui <- tagList(
       
       tags$head(
         # Favicon + Title (again for redundancy)
-        tags$link(rel = "icon", type = "image/png",
-                  href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
-        tags$title("OS Initiatives Tracker"),
+        # tags$link(rel = "icon", type = "image/png",
+        #           href = "https://upload.wikimedia.org/wikipedia/commons/f/f0/Cadenas-ouvert-vert.svg"),
+        # tags$title("OS Initiatives Tracker"),
+        
+        tags$link(rel = "icon", type = "image/png", href = "hub6.png"),
+        tags$title("OSMI Hub"),
         
         # ---- Custom Section Styles ----
         tags$style(HTML("
@@ -465,7 +473,7 @@ tabItems(
             box(
               title = div(
                 icon("globe-europe", style = "margin-right: 10px;"),  # Icon before title
-                "Welcome to the Open Science Initiatives Tracker"
+                "Welcome to the Open Science Mapping Initiatives (OSMI) Hub"
               ),
               status = "primary",
               solidHeader = TRUE,
@@ -486,8 +494,8 @@ tabItems(
               tags$div(
                 style = "text-align: center; padding-bottom: 40px;",
 
-                tags$i(class = "fa fa-satellite-dish", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
-
+                tags$i(class = "fa fa-chart-line", style = "font-size: 100px; color: #007bff; margin-bottom: 10px;"),
+# fa fa-chart-line  # fa fa-users 
                 tags$div(
                   style = "font-size: 100px; font-weight: bold; color: #007bff;",
                   textOutput("distinct_initiatives")
@@ -698,6 +706,30 @@ tabItems(
                 )
               )
             )
+          ),
+          
+          # Bande horizontale claire avec logos cliquables
+          fluidRow(
+            tags$div(
+              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+              
+              # Logos avec liens 
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://open-science-monitoring.org/",
+                target = "_blank",
+                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+              )
+            )
           )
   ),
   
@@ -727,6 +759,30 @@ tabItems(
                 height = "800px",
                 frameborder = "0",
                 style = "border: none;"
+              )
+            )
+          ),
+          
+          # Bande horizontale claire avec logos cliquables
+          fluidRow(
+            tags$div(
+              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+              
+              # Logos avec liens 
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://open-science-monitoring.org/",
+                target = "_blank",
+                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
               )
             )
           )
@@ -771,6 +827,30 @@ tabItems(
                 )
               )
             )
+          ),
+          
+          # Bande horizontale claire avec logos cliquables
+          fluidRow(
+            tags$div(
+              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+              
+              # Logos avec liens 
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+              ),
+              tags$a(
+                href = "https://open-science-monitoring.org/",
+                target = "_blank",
+                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+              )
+            )
           )
   ),
 
@@ -812,6 +892,30 @@ tabItem(tabName = "by_category",
             tags$p(
               "Click on a bar above to view the initiatives belonging to the selected category.",
               style = "color: #555;"
+            )
+          )
+        ),
+        
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
           )
         )
@@ -865,6 +969,30 @@ tabItem(tabName = "by_country",
                 "This map displays a comparison of community governance practices in open science initiatives. 
           The pie charts represent the proportion of initiatives with and without community-driven governance structures."
               )
+            )
+          )
+        ),
+        
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
           )
         )
@@ -1105,6 +1233,30 @@ tabItem(tabName = "principles",
                      )
                  )
           )
+        ),
+        
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            )
+          )
         )
 ),
 
@@ -1186,6 +1338,30 @@ tabItem(tabName = "mca",
                    )
                  )
           )
+        ),
+        
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            )
+          )
         )
 ),    
 
@@ -1201,7 +1377,7 @@ tabItem(tabName = "hcpc",
                    status = "danger",
                    solidHeader = TRUE,
                    width = 12,
-                   plotlyOutput("dendrogram", height = "6000px"),
+                   plotlyOutput("dendrogram", height = "7000px"),
                    tags$p(
                      "This dendrogram shows the hierarchical clustering of initiatives based on their characteristics. Clusters reveal how initiatives group by similarity."
                    )
@@ -1253,6 +1429,30 @@ tabItem(tabName = "hcpc",
                  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);"
             )
           )
+        ),
+        
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            )
+          )
         )
 ),
 
@@ -1301,6 +1501,30 @@ tabItem(tabName = "monitoring",
               style = "display:inline-block; margin-top:10px; font-size:16px;"
             )
           )
+        ),
+        
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            )
+          )
         )
 ),
 
@@ -1317,6 +1541,30 @@ tabItem(tabName = "about",
               width = "100%",
               height = "800px",
               style = "border: none;"
+            )
+          )
+        ),
+        
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
           )
         )
@@ -1337,7 +1585,30 @@ tabItem(tabName = "FAQs",
               style = "border: none;"
             )
           )
-         )
+         ),
+        # Bande horizontale claire avec logos cliquables
+        fluidRow(
+          tags$div(
+            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            
+            # Logos avec liens 
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            ),
+            tags$a(
+              href = "https://open-science-monitoring.org/",
+              target = "_blank",
+              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            )
+          )
+        )
         )
       )
     )
@@ -1643,10 +1914,37 @@ server <- function(input, output, session) {
   })
   
  
+  # output$mca_plot_ui <- renderUI({
+  #   acm_object <- mca_results()$acm
+  #   d <- mca_results()$d
+  #   
+  #   rownames(acm_object$li) <- rownames(d)
+  #   res <- prepare_results(acm_object)
+  #   
+  #   div(
+  #     style = "height: 800px;",  
+  #     MCA_ind_plot(res,
+  #                  width = "90%", height = "800px",
+  #                  xax = 1, yax = 2,
+  #                  ind_sup = FALSE,
+  #                  lab_var = "Lab",
+  #                  ind_lab_min_contrib = 0,
+  #                  col_var = "Nonprofit",
+  #                  labels_size = 9,
+  #                  point_opacity = 0.5,
+  #                  opacity_var = NULL,
+  #                  point_size = 64,
+  #                  ellipses = FALSE,
+  #                  transitions = TRUE,
+  #                  labels_positions = "auto",
+  #                  xlim = c(-2.27, 2.39),
+  #                  ylim = c(-1.46, 1.5))
+  #   )
+  # })
+  
   output$mca_plot_ui <- renderUI({
     acm_object <- mca_results()$acm
     d <- mca_results()$d
-    
     rownames(acm_object$li) <- rownames(d)
     res <- prepare_results(acm_object)
     
@@ -1657,19 +1955,19 @@ server <- function(input, output, session) {
                    xax = 1, yax = 2,
                    ind_sup = FALSE,
                    lab_var = "Lab",
-                   ind_lab_min_contrib = 0,
+                   ind_lab_min_contrib = 0.05, # moins de labels
                    col_var = "Nonprofit",
-                   labels_size = 9,
+                   labels_size = 7,            # plus petit
                    point_opacity = 0.5,
-                   opacity_var = NULL,
-                   point_size = 64,
+                   point_size = 32,            # plus petit
                    ellipses = FALSE,
-                   transitions = TRUE,
+                   transitions = FALSE,        # désactiver animations
                    labels_positions = "auto",
                    xlim = c(-2.27, 2.39),
                    ylim = c(-1.46, 1.5))
     )
   })
+  
   
   
   # Render the MCA plot for Category dimension
@@ -1687,14 +1985,14 @@ server <- function(input, output, session) {
                    xax = 1, yax = 2,
                    ind_sup = FALSE,
                    lab_var = "Lab",
-                   ind_lab_min_contrib = 0,
+                   ind_lab_min_contrib = 0.05,
                    col_var = "Category",
-                   labels_size = 9,
+                   labels_size = 7,
                    point_opacity = 0.5,
                    opacity_var = NULL,
-                   point_size = 64,
+                   point_size = 32,
                    ellipses = FALSE,
-                   transitions = TRUE,
+                   transitions = FALSE,
                    labels_positions = "auto",
                    xlim = c(-2.27, 2.39),
                    ylim = c(-1.46, 1.5))
@@ -1786,7 +2084,7 @@ server <- function(input, output, session) {
         y = ~y_horiz,
         text = ~label,
         # textfont = list(size = 13),
-        textfont = list(size = 13, family = "Arial Black"),
+        textfont = list(size = 15, family = "Arial Black"),
         textposition = "right",
         color = ~cluster,
         colors = "Set1",
@@ -1799,7 +2097,7 @@ server <- function(input, output, session) {
         xaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE,
                      range = c(0, label_offset + 9)),
         yaxis = list(title = "", showticklabels = FALSE, zeroline = FALSE),
-        margin = list(l = 20, r = 30, t = 30, b = 20)
+        margin = list(l = 20, r = 35, t = 30, b = 20)
       )
     
   })
