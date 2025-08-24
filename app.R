@@ -178,7 +178,7 @@ ui <- tagList(
     
       # # Set favicon and page title
       tags$link(rel = "icon", type = "image/png", href = "hub6.png"),
-      tags$title("OSMI Hub"),
+      tags$title("COSMI Hub"),
 
     
     # Custom hover color styles for each sidebar menu item
@@ -208,7 +208,7 @@ ui <- tagList(
     # HEADER with App Title + Overview Button
     #===========================
     dashboardHeader(
-      title = tags$strong("OSMI Hub"),
+      title = tags$strong("COSMI Hub"),
       titleWidth = 230,
       
       # Navigation button: Overview
@@ -326,7 +326,7 @@ ui <- tagList(
         # tags$title("OS Initiatives Tracker"),
         
         tags$link(rel = "icon", type = "image/png", href = "hub6.png"),
-        tags$title("OSMI Hub"),
+        tags$title("COSMI Hub"),
         
         # ---- Custom Section Styles ----
         tags$style(HTML("
@@ -473,7 +473,7 @@ tabItems(
             box(
               title = div(
                 icon("globe-europe", style = "margin-right: 10px;"),  # Icon before title
-                "Welcome to the Open Science Mapping Initiatives (OSMI) Hub"
+                "Welcome to the Community Open Science Mapping Initiatives (COSMI) Hub"
               ),
               status = "primary",
               solidHeader = TRUE,
@@ -671,12 +671,13 @@ tabItems(
                 href = "https://www.gemass.fr/contract/openit/",
                 target = "_blank",
                 tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-              ),
-              tags$a(
-                href = "https://open-science-monitoring.org/",
-                target = "_blank",
-                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
               )
+              # ,
+              # tags$a(
+              #   href = "https://open-science-monitoring.org/",
+              #   target = "_blank",
+              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+              # )
             )
           )
   
@@ -723,12 +724,13 @@ tabItems(
                 href = "https://www.gemass.fr/contract/openit/",
                 target = "_blank",
                 tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-              ),
-              tags$a(
-                href = "https://open-science-monitoring.org/",
-                target = "_blank",
-                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
               )
+              # ,
+              # tags$a(
+              #   href = "https://open-science-monitoring.org/",
+              #   target = "_blank",
+              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+              # )
             )
           )
   ),
@@ -778,12 +780,13 @@ tabItems(
                 href = "https://www.gemass.fr/contract/openit/",
                 target = "_blank",
                 tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-              ),
-              tags$a(
-                href = "https://open-science-monitoring.org/",
-                target = "_blank",
-                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
               )
+              # ,
+              # tags$a(
+              #   href = "https://open-science-monitoring.org/",
+              #   target = "_blank",
+              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+              # )
             )
           )
   ),
@@ -844,12 +847,13 @@ tabItems(
                 href = "https://www.gemass.fr/contract/openit/",
                 target = "_blank",
                 tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-              ),
-              tags$a(
-                href = "https://open-science-monitoring.org/",
-                target = "_blank",
-                tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
               )
+              # ,
+              # tags$a(
+              #   href = "https://open-science-monitoring.org/",
+              #   target = "_blank",
+              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+              # )
             )
           )
   ),
@@ -911,12 +915,13 @@ tabItem(tabName = "by_category",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
 ),
@@ -988,12 +993,13 @@ tabItem(tabName = "by_country",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
 ),
@@ -1250,12 +1256,13 @@ tabItem(tabName = "principles",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
 ),
@@ -1355,12 +1362,13 @@ tabItem(tabName = "mca",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
 ),    
@@ -1446,12 +1454,13 @@ tabItem(tabName = "hcpc",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
 ),
@@ -1518,12 +1527,13 @@ tabItem(tabName = "monitoring",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
 ),
@@ -1560,12 +1570,13 @@ tabItem(tabName = "about",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
 ),
@@ -1601,12 +1612,13 @@ tabItem(tabName = "FAQs",
               href = "https://www.gemass.fr/contract/openit/",
               target = "_blank",
               tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-            ),
-            tags$a(
-              href = "https://open-science-monitoring.org/",
-              target = "_blank",
-              tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
             )
+            # ,
+            # tags$a(
+            #   href = "https://open-science-monitoring.org/",
+            #   target = "_blank",
+            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+            # )
           )
         )
         )
