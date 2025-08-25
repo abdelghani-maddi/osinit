@@ -1,6 +1,6 @@
-# 🌍 Open Science Initiatives Tracker - OSINIT
+# 🌍 Community Open Science Mapping Initiatives (COSMI) Hub
 
-**Open Science Initiatives Tracker** is a web application designed to visualize, explore, and analyze global open science initiatives.  
+**COSMI Hub** is a web application designed to visualize, explore, and analyze global open science initiatives.  
 This dashboard integrates interactive maps, charts, and statistical analyses to help researchers, policymakers, and communities understand the distribution, categories, governance models, and collaborative networks behind open science projects worldwide.
 
 ---
