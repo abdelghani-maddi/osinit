@@ -108,7 +108,7 @@ names(data_cg_wide) <- gsub("list_initiatives_", "list_", names(data_cg_wide))
 # Function to perform MCA (Correspondence Analysis)
 perform_mca <- function(data) {
   d <- data %>%
-    select(Abbreviated_OrgName, Nonprofit, Category, CommunityGovernance) %>%
+    select(Abbreviated_OrgName, Nonprofit, Category, CommunityGovernance, OpenSource) %>%
     mutate(across(everything(), as.factor))  # Convert columns to factors for MCA
   
   d$Abbreviated_OrgName <- substr(d$Abbreviated_OrgName, 1, 35)
@@ -251,7 +251,7 @@ ui <- tagList(
         id = "tabs",  # Tab navigation identifier
         
         # 1. Global Overview
-        menuItem(" Global overview", tabName = "overview", icon = icon("globe")),
+        menuItem(" Global Overview", tabName = "overview", icon = icon("globe")),
         
         # 2. Explore Section
         menuItem("Explore Initiatives", icon = icon("map"),
@@ -275,7 +275,7 @@ ui <- tagList(
         # 5. Contribution & Data
         menuItem("Contribute & Data", icon = icon("users"),
                  menuSubItem("Suggest Initiative", tabName = "add_initiative"),
-                 menuSubItem("Report an error", tabName = "report_error"),
+                 menuSubItem("Report an Error", tabName = "report_error"),
                  menuSubItem("Download Dataset", tabName = "download_data"),
                  menuSubItem("Source Code (GitHub)", 
                              href = "https://github.com/abdelghani-maddi/osinit", 
@@ -285,7 +285,9 @@ ui <- tagList(
         # 6. Resources
         menuItem("Resources", icon = icon("book"),
                  menuSubItem("About the Project", tabName = "about"),
-                 menuSubItem("FAQs", tabName = "FAQs")
+                 menuSubItem("FAQs", tabName = "FAQs"),
+                 menuSubItem("Methodological Background", tabName = "Method")
+                 
         ),
         
         # # 7. Logos (external links)
@@ -650,36 +652,132 @@ tabItems(
                 div(class = "section-subtitle", "Project description and FAQs"),
                 div(class = "section-hover-menu",
                     actionButton("goto_about", "About the Project", class = "btn-explore"),
-                    actionButton("goto_faqs", "FAQs", class = "btn-explore")
+                    actionButton("goto_faqs", "FAQs", class = "btn-explore"), 
+                    actionButton("goto_method", "Methodological Background", class = "btn-explore") # Methodological Background
+                    
                 )
               )
             )
+            
+            
+            
           ),
           
           # Bande horizontale claire avec logos cliquables
-          fluidRow(
-            tags$div(
-              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
-              
-              # Logos avec liens 
-              tags$a(
-                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-                target = "_blank",
-                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
-              ),
-              tags$a(
-                href = "https://www.gemass.fr/contract/openit/",
-                target = "_blank",
-                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-              )
-              # ,
-              # tags$a(
-              #   href = "https://open-science-monitoring.org/",
-              #   target = "_blank",
-              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-              # )
-            )
-          )
+          # fluidRow(
+          #   tags$div(
+          #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+          #     
+          #     # Logos avec liens 
+          #     tags$a(
+          #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+          #       target = "_blank",
+          #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+          #     ),
+          #     tags$a(
+          #       href = "https://www.gemass.fr/contract/openit/",
+          #       target = "_blank",
+          #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+          #     )
+          #     # ,
+          #     # tags$a(
+          #     #   href = "https://open-science-monitoring.org/",
+          #     #   target = "_blank",
+          #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+          #     # )
+          #     ,
+          #     tags$a(
+          #       href = "https://amcm.shinyapps.io/openit/",
+          #       target = "_blank",
+          #       tags$img(src = "qr-code dashboard.png", alt = "OSMI", style = "height:100px; margin: 0 10px; vertical-align: middle;")
+          #     )
+          #     ,
+          #     tags$a(
+          #       href = "https://amcm.shinyapps.io/openit/",
+          #       target = "_blank",
+          #       tags$img(src = "qr-code openit.png", alt = "OSMI", style = "height:100px; margin: 0 10px; vertical-align: middle;")
+          #     )
+          #     ,
+          #     tags$a(
+          #       href = "https://amcm.shinyapps.io/openit/",
+          #       target = "_blank",
+          #       tags$img(src = "qr-code github.png", alt = "OSMI", style = "height:100px; margin: 0 10px; vertical-align: middle;")
+          #     )
+          #   )
+          # )
+
+fluidRow(
+  tags$div(
+    style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
+    
+    # Bloc gauche (logos)
+    tags$div(
+      style = "display: flex; align-items: center;",
+      tags$a(
+        href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        target = "_blank",
+        tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                 style = "height:65px; margin: 0 15px;")
+      ),
+      tags$a(
+        href = "https://www.gemass.fr/contract/openit/",
+        target = "_blank",
+        tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                 style = "height:70px; margin: 0 15px;")
+      ),
+      tags$a(
+        href = "https://www.gemass.fr/",
+        target = "_blank",
+        tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                 style = "height:30px; margin: 0 15px;")
+      ),
+      tags$a(
+        href = "https://www.sorbonne-universite.fr/",
+        target = "_blank",
+        tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                 style = "height:30px; margin: 0 15px;")
+      ),
+      tags$a(
+        href = "https://www.cnrs.fr",
+        target = "_blank",
+        tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                 style = "height:40px; margin: 0 15px;")
+      )
+    ),
+    
+    # Bloc droit (QR codes)
+    tags$div(
+      style = "display: flex; align-items: center;",
+      tags$a(
+        href = "https://amcm.shinyapps.io/openit/",
+        target = "_blank",
+        tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                 style = "height:100px; margin: 0 10px;")
+      ),
+      tags$a(
+        href = "https://www.gemass.fr/contract/openit/",
+        target = "_blank",
+        tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                 style = "height:100px; margin: 0 10px;")
+      ),
+      tags$a(
+        href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+        target = "_blank",
+        tags$img(src = "qr-code github.png", alt = "GitHub", 
+                 style = "height:100px; margin: 0 10px;")
+      )
+    )
+  )
+)
+
   
   ),
   
@@ -710,27 +808,98 @@ tabItems(
           ),
           
           # Bande horizontale claire avec logos cliquables
+          # fluidRow(
+          #   tags$div(
+          #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+          #     
+          #     # Logos avec liens 
+          #     tags$a(
+          #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+          #       target = "_blank",
+          #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+          #     ),
+          #     tags$a(
+          #       href = "https://www.gemass.fr/contract/openit/",
+          #       target = "_blank",
+          #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+          #     )
+          #     # ,
+          #     # tags$a(
+          #     #   href = "https://open-science-monitoring.org/",
+          #     #   target = "_blank",
+          #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+          #     # )
+          #   )
+          # )
           fluidRow(
             tags$div(
-              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+              style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
               
-              # Logos avec liens 
-              tags$a(
-                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-                target = "_blank",
-                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+              # Bloc gauche (logos)
+              tags$div(
+                style = "display: flex; align-items: center;",
+                tags$a(
+                  href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                  target = "_blank",
+                  tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                           style = "height:65px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/contract/openit/",
+                  target = "_blank",
+                  tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                           style = "height:70px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/",
+                  target = "_blank",
+                  tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                           style = "height:30px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.sorbonne-universite.fr/",
+                  target = "_blank",
+                  tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                           style = "height:30px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.cnrs.fr",
+                  target = "_blank",
+                  tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                           style = "height:40px; margin: 0 15px;")
+                )
               ),
-              tags$a(
-                href = "https://www.gemass.fr/contract/openit/",
-                target = "_blank",
-                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+              
+              # Bloc droit (QR codes)
+              tags$div(
+                style = "display: flex; align-items: center;",
+                tags$a(
+                  href = "https://amcm.shinyapps.io/openit/",
+                  target = "_blank",
+                  tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                           style = "height:100px; margin: 0 10px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/contract/openit/",
+                  target = "_blank",
+                  tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                           style = "height:100px; margin: 0 10px;")
+                ),
+                tags$a(
+                  href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                  target = "_blank",
+                  tags$img(src = "qr-code github.png", alt = "GitHub", 
+                           style = "height:100px; margin: 0 10px;")
+                )
               )
-              # ,
-              # tags$a(
-              #   href = "https://open-science-monitoring.org/",
-              #   target = "_blank",
-              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-              # )
             )
           )
   ),
@@ -756,7 +925,7 @@ tabItems(
               
               # Embedded Google Form
               tags$iframe(
-                src = "https://docs.google.com/forms/d/1iDJp9iMNSfG2ur47i6122QphXxssL34-my_m2vDusoI/preview",
+                src = "https://docs.google.com/forms/d/e/1FAIpQLSfLOH_DMYEw6AdGHKbK_K9Tjtdvff-IOp87NzJoX0ZtCKYdVw/viewform?usp=sharing&ouid=115100398855654378779",
                 width = "100%",
                 height = "800px",
                 frameborder = "0",
@@ -766,27 +935,98 @@ tabItems(
           ),
           
           # Bande horizontale claire avec logos cliquables
+          # fluidRow(
+          #   tags$div(
+          #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+          #     
+          #     # Logos avec liens 
+          #     tags$a(
+          #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+          #       target = "_blank",
+          #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+          #     ),
+          #     tags$a(
+          #       href = "https://www.gemass.fr/contract/openit/",
+          #       target = "_blank",
+          #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+          #     )
+          #     # ,
+          #     # tags$a(
+          #     #   href = "https://open-science-monitoring.org/",
+          #     #   target = "_blank",
+          #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+          #     # )
+          #   )
+          # )
           fluidRow(
             tags$div(
-              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+              style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
               
-              # Logos avec liens 
-              tags$a(
-                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-                target = "_blank",
-                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+              # Bloc gauche (logos)
+              tags$div(
+                style = "display: flex; align-items: center;",
+                tags$a(
+                  href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                  target = "_blank",
+                  tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                           style = "height:65px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/contract/openit/",
+                  target = "_blank",
+                  tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                           style = "height:70px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/",
+                  target = "_blank",
+                  tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                           style = "height:30px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.sorbonne-universite.fr/",
+                  target = "_blank",
+                  tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                           style = "height:30px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.cnrs.fr",
+                  target = "_blank",
+                  tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                           style = "height:40px; margin: 0 15px;")
+                )
               ),
-              tags$a(
-                href = "https://www.gemass.fr/contract/openit/",
-                target = "_blank",
-                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+              
+              # Bloc droit (QR codes)
+              tags$div(
+                style = "display: flex; align-items: center;",
+                tags$a(
+                  href = "https://amcm.shinyapps.io/openit/",
+                  target = "_blank",
+                  tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                           style = "height:100px; margin: 0 10px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/contract/openit/",
+                  target = "_blank",
+                  tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                           style = "height:100px; margin: 0 10px;")
+                ),
+                tags$a(
+                  href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                  target = "_blank",
+                  tags$img(src = "qr-code github.png", alt = "GitHub", 
+                           style = "height:100px; margin: 0 10px;")
+                )
               )
-              # ,
-              # tags$a(
-              #   href = "https://open-science-monitoring.org/",
-              #   target = "_blank",
-              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-              # )
             )
           )
   ),
@@ -833,27 +1073,98 @@ tabItems(
           ),
           
           # Bande horizontale claire avec logos cliquables
+          # fluidRow(
+          #   tags$div(
+          #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+          #     
+          #     # Logos avec liens 
+          #     tags$a(
+          #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+          #       target = "_blank",
+          #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+          #     ),
+          #     tags$a(
+          #       href = "https://www.gemass.fr/contract/openit/",
+          #       target = "_blank",
+          #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+          #     )
+          #     # ,
+          #     # tags$a(
+          #     #   href = "https://open-science-monitoring.org/",
+          #     #   target = "_blank",
+          #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+          #     # )
+          #   )
+          # )
           fluidRow(
             tags$div(
-              style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+              style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
               
-              # Logos avec liens 
-              tags$a(
-                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-                target = "_blank",
-                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+              # Bloc gauche (logos)
+              tags$div(
+                style = "display: flex; align-items: center;",
+                tags$a(
+                  href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                  target = "_blank",
+                  tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                           style = "height:65px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/contract/openit/",
+                  target = "_blank",
+                  tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                           style = "height:70px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/",
+                  target = "_blank",
+                  tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                           style = "height:30px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.sorbonne-universite.fr/",
+                  target = "_blank",
+                  tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                           style = "height:30px; margin: 0 15px;")
+                ),
+                tags$a(
+                  href = "https://www.cnrs.fr",
+                  target = "_blank",
+                  tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                           style = "height:40px; margin: 0 15px;")
+                )
               ),
-              tags$a(
-                href = "https://www.gemass.fr/contract/openit/",
-                target = "_blank",
-                tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+              
+              # Bloc droit (QR codes)
+              tags$div(
+                style = "display: flex; align-items: center;",
+                tags$a(
+                  href = "https://amcm.shinyapps.io/openit/",
+                  target = "_blank",
+                  tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                           style = "height:100px; margin: 0 10px;")
+                ),
+                tags$a(
+                  href = "https://www.gemass.fr/contract/openit/",
+                  target = "_blank",
+                  tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                           style = "height:100px; margin: 0 10px;")
+                ),
+                tags$a(
+                  href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                  target = "_blank",
+                  tags$img(src = "qr-code github.png", alt = "GitHub", 
+                           style = "height:100px; margin: 0 10px;")
+                )
               )
-              # ,
-              # tags$a(
-              #   href = "https://open-science-monitoring.org/",
-              #   target = "_blank",
-              #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-              # )
             )
           )
   ),
@@ -901,27 +1212,98 @@ tabItem(tabName = "by_category",
         ),
         
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
 ),
@@ -979,27 +1361,98 @@ tabItem(tabName = "by_country",
         ),
         
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
 ),
@@ -1144,28 +1597,126 @@ tabItem(tabName = "principles",
         ),
         
         # ---- CONTENT SECTION ----
+        # fluidRow(
+        #   column(12,
+        #          
+        #          # Main section container
+        #          div(class = "principle-section",
+        #         
+        #            div(
+        #              style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; 
+        #   display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
+        #              div(
+        #                style = "flex: 1; min-width: 250px;",
+        #                div(class = "principle-title-main", "Principles of Open Science Monitoring"),
+        #                div(class = "principle-subtitle", 
+        #                    "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
+        #              ),
+        #              tags$a(
+        #                href = "https://open-science-monitoring.org/",
+        #                target = "_blank",  
+        #                tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
+        #              )
+        #            ),
+        #            
+        #              br(),
+        #              
+        #              # ----- Accordion 1: Relevance and Significance -----
+        #              tags$details(class = "accordion-card", style = "border-left: 6px solid #3b82f6;",
+        #                           tags$summary(class = "accordion-header",
+        #                                        style = "background: linear-gradient(to right, #3b82f6, #60a5fa);",
+        #                                        span(class = "badge-circle", icon("lightbulb")),
+        #                                        "Part 1: Relevance and Significance"
+        #                           ),
+        #                           div(class = "accordion-content", HTML("
+        #     <ul>
+        #       <li><strong>Applicable and clear in scope:</strong> Indicators must be explicitly defined, relevant and scoped appropriately.</li>
+        #       <li><strong>Meaningful for planning and policy:</strong> Indicators should support policy-making across contexts.</li>
+        #       <li><strong>Co-created:</strong> Developed inclusively with researchers and communities.</li>
+        #       <li><strong>Inclusive:</strong> Reflect diversity of contexts, languages, gender, knowledge systems.</li>
+        #       <li><strong>Modular:</strong> Allow flexible composition of indicators for local/global alignment.</li>
+        #       <li><strong>Reliable:</strong> Explicit about scientific consensus and development stage.</li>
+        #       <li><strong>Consistent:</strong> Enable long-term, cross-institutional comparability.</li>
+        #     </ul>
+        #   "))
+        #              ),
+        #              
+        #              # ----- Accordion 2: Transparency and Reproducibility -----
+        #              tags$details(class = "accordion-card", style = "border-left: 6px solid #d4af37;",
+        #                           tags$summary(class = "accordion-header",
+        #                                        style = "background: linear-gradient(to right, #facc15, #fde68a);",
+        #                                        span(class = "badge-circle", icon("eye")),
+        #                                        "Part 2: Transparency and Reproducibility"
+        #                           ),
+        #                           div(class = "accordion-content", HTML("
+        #     <ul>
+        #       <li><strong>Openness:</strong> Use open infrastructures, tools, and licenses.</li>
+        #       <li><strong>Quality of sources:</strong> Data must be timely, complete, and accurate.</li>
+        #       <li><strong>Documentation:</strong> Clearly describe data sources, provenance, and methods.</li>
+        #       <li><strong>Reproducibility and reusability:</strong> Version indicators and enable reuse.</li>
+        #       <li><strong>Metadata:</strong> Include rich, standardized metadata with PIDs.</li>
+        #       <li><strong>Community principles:</strong> Align with FAIR, CARE, TRUST frameworks.</li>
+        #       <li><strong>Contextual communication:</strong> Prevent misinterpretation; explain clearly.</li>
+        #       <li><strong>Conflict of interest:</strong> Declare transparently when relevant.</li>
+        #     </ul>
+        #   "))
+        #              ),
+        #              
+        #              # ----- Accordion 3: Self-Assessment and Responsible Use -----
+        #              tags$details(class = "accordion-card", style = "border-left: 6px solid #8b5cf6;",
+        #                           tags$summary(class = "accordion-header",
+        #                                        style = "background: linear-gradient(to right, #8b5cf6, #c4b5fd);",
+        #                                        span(class = "badge-circle", icon("balance-scale")),
+        #                                        "Part 3: Self-Assessment and Responsible Use"
+        #                           ),
+        #                           div(class = "accordion-content", HTML("
+        #     <ul>
+        #       <li><strong>Self-evaluation:</strong> Regularly assess and disclose alignment with these principles.</li>
+        #       <li><strong>Revision:</strong> Continuously improve and adapt indicators over time.</li>
+        #       <li><strong>Environmental responsibility:</strong> Reduce monitoring system impact.</li>
+        #       <li><strong>Long-term sustainability:</strong> Plan for funding, access and infrastructure.</li>
+        #       <li><strong>Constructive comparison:</strong> Avoid rankings, encourage fair benchmarking.</li>
+        #     </ul>
+        #   "))
+        #              ),
+        #              
+        #              # ---- Footer with Source Link ----
+        #              div(class = "source-box",
+        #                  tags$em("Source: Open Science Monitoring Initiative, 2025"),
+        #                  tags$br(),
+        #                  tags$a(
+        #                    href = "https://doi.org/10.5281/zenodo.15807481",
+        #                    target = "_blank",
+        #                    "Access full document"
+        #                  )
+        #              )
+        #          )
+        #   )
+        # ),
+        
         fluidRow(
           column(12,
                  
                  # Main section container
                  div(class = "principle-section",
-                
-                   div(
-                     style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; 
-          display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
+                     
                      div(
-                       style = "flex: 1; min-width: 250px;",
-                       div(class = "principle-title-main", "Principles of Open Science Monitoring"),
-                       div(class = "principle-subtitle", 
-                           "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
+                       style = "background-color: rgba(255, 255, 255, 0.9); padding: 20px 30px; border-radius: 12px; 
+          display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;",
+                       div(
+                         style = "flex: 1; min-width: 250px;",
+                         div(class = "principle-title-main", "We follow the Principles of Open Science Monitoring by OSMI"),
+                         div(class = "principle-subtitle", 
+                             "Explore the foundational dimensions of ethical, inclusive and sustainable monitoring practices.")
+                       )
+                       # ,
+                       # tags$a(
+                       #   href = "https://open-science-monitoring.org/",
+                       #   target = "_blank",  
+                       #   tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
+                       # )
                      ),
-                     tags$a(
-                       href = "https://open-science-monitoring.org/",
-                       target = "_blank",  
-                       tags$img(src = "logo-osmi.png", class = "osmi-logo-small")
-                     )
-                   ),
-                   
+                     
                      br(),
                      
                      # ----- Accordion 1: Relevance and Significance -----
@@ -1176,16 +1727,18 @@ tabItem(tabName = "principles",
                                                "Part 1: Relevance and Significance"
                                   ),
                                   div(class = "accordion-content", HTML("
-            <ul>
-              <li><strong>Applicable and clear in scope:</strong> Indicators must be explicitly defined, relevant and scoped appropriately.</li>
-              <li><strong>Meaningful for planning and policy:</strong> Indicators should support policy-making across contexts.</li>
-              <li><strong>Co-created:</strong> Developed inclusively with researchers and communities.</li>
-              <li><strong>Inclusive:</strong> Reflect diversity of contexts, languages, gender, knowledge systems.</li>
-              <li><strong>Modular:</strong> Allow flexible composition of indicators for local/global alignment.</li>
-              <li><strong>Reliable:</strong> Explicit about scientific consensus and development stage.</li>
-              <li><strong>Consistent:</strong> Enable long-term, cross-institutional comparability.</li>
-            </ul>
-          "))
+<p><strong>All open science monitoring initiatives should be well-defined, relevant, and adaptable to diverse research contexts.</strong> They should support evidence-based policies and decisions, be developed through inclusive and participatory collaborative processes, and reflect the diversity of disciplines and stakeholders. Ensuring modularity, transparency, and consistency allows for reliable assessment while accommodating different needs and practices. Hence, to the extent possible, open science monitoring indicators should be:</p>
+
+<ol>
+  <li><strong>Applicable and clear in scope:</strong> Indicators should be applicable and relevant to the specific monitoring tasks. Their scope and meaning should be explicitly defined, and any limitations or constraints on their applicability should be clearly communicated.</li>
+  <li><strong>Meaningful for planning and policy:</strong> Indicators should align with broader public and global priorities and be accessible and useful for a wide range of stakeholders. They should enable the relevant stakeholders to design and evaluate context-specific monitoring systems, fostering evidence-informed policies, decisions and actions over time.</li>
+  <li><strong>Co-created:</strong> Indicators should be co-created with the research communities involved and, where appropriate, with the relevant non-academic communities, through public consultation and dialogue, ensuring the inclusion of underrepresented groups. The development and adoption of indicators should be driven by active participation from relevant stakeholders, grounded in community-driven activities and priorities.</li>
+  <li><strong>Inclusive:</strong> Indicators should reflect the diversity of stakeholders, academic disciplines, languages, and the economic, sociocultural contexts and geopolitical constraints of the research landscape being monitored. They should account for gender equality, region-specific, and infrastructural needs. Additionally, they should embrace the richness of diverse knowledge systems, epistemologies, and knowledge producers, and explicitly address potential biases and historical inequities in knowledge production.</li>
+  <li><strong>Modular:</strong> Indicator frameworks should be modular, enabling different communities to assemble indicator sets that best suit their specific needs. To support diversity and inclusion while ensuring both global comparability and local adaptability, these frameworks should incorporate a mix of quantitative and qualitative approaches, including case studies.</li>
+  <li><strong>Reliable:</strong> The level of scientific consensus around the reliability of each indicator needs to be made explicit. To ensure transparency, any indicator that is experimental or still under development should be clearly identified and labelled as such.</li>
+  <li><strong>Consistent:</strong> Indicators should be consistent to facilitate comparability between institutions, countries, regions, research areas and disciplines over time.</li>
+</ol>
+                          "))
                      ),
                      
                      # ----- Accordion 2: Transparency and Reproducibility -----
@@ -1196,17 +1749,19 @@ tabItem(tabName = "principles",
                                                "Part 2: Transparency and Reproducibility"
                                   ),
                                   div(class = "accordion-content", HTML("
-            <ul>
-              <li><strong>Openness:</strong> Use open infrastructures, tools, and licenses.</li>
-              <li><strong>Quality of sources:</strong> Data must be timely, complete, and accurate.</li>
-              <li><strong>Documentation:</strong> Clearly describe data sources, provenance, and methods.</li>
-              <li><strong>Reproducibility and reusability:</strong> Version indicators and enable reuse.</li>
-              <li><strong>Metadata:</strong> Include rich, standardized metadata with PIDs.</li>
-              <li><strong>Community principles:</strong> Align with FAIR, CARE, TRUST frameworks.</li>
-              <li><strong>Contextual communication:</strong> Prevent misinterpretation; explain clearly.</li>
-              <li><strong>Conflict of interest:</strong> Declare transparently when relevant.</li>
-            </ul>
-          "))
+<p><strong>Open science monitoring should, wherever possible, prioritize the use of open, transparent, and reproducible information, including metadata.</strong> It should further draw on infrastructures and methodologies that adhere to shared, agreed-upon principles and rely on publicly accessible data sources. In this context, to the extent possible, open science monitoring systems should prioritize:</p>
+
+<ol>
+  <li><strong>Openness:</strong> Monitoring initiatives should rely on open scholarly infrastructures with open input and output data as defined in the 2021 UNESCO Recommendation on Open Science. All software used throughout the monitoring process should be open source, versioned, and published openly with clear, comprehensive documentation on platforms that facilitate collaboration, contribution, and reuse. Output data, when not protected for copyright, privacy, contractual terms, or other legal or ethical reasons, should be open by default and distributed under an open licence.</li>
+  <li><strong>Quality of sources:</strong> Input data for each indicator should be of high accuracy, comprehensive coverage, and up-to-date timeliness. As appropriate these aspects should be evaluated and publicly documented for each indicator, ensuring transparency and reliability. In addition, all indicators and their underlying data should be updated regularly and in a timely manner to enable effective monitoring of changes over time.</li>
+  <li><strong>Public documentation of sources and methodology:</strong> All indicators should be accompanied by publicly available documentation detailing data collection methods, provenance, processing steps, and implementation choices. This documentation should rigorously specify the origin, version, and licensing of each data point to ensure clear and reliable provenance. Additionally, any indicators generated using artificial intelligence must be explicitly identified.</li>
+  <li><strong>Reproducibility and reusability:</strong> To ensure reproducibility, each indicator should be fully traceable, with versioning and a clear record of any modifications over time, ensuring data integrity and understandability. Furthermore, all monitoring results and indicator outcomes should be as reusable as possible.</li>
+  <li><strong>Comprehensive metadata:</strong> Monitoring outputs should be annotated with detailed and, where possible, standardized metadata to ensure data findability and usability for humans and machines. When relevant and appropriate persistent identifiers should be used to identify research outputs and resources as part of the monitoring process, to improve openness, provenance, citability, and transparency.</li>
+  <li><strong>Consideration of community-defined and recognized principles:</strong> To the extent possible, monitoring outputs should be compliant with the FAIR (Findable, Accessible, Interoperable, Reusable), CARE (Collective Benefit, Authority to Control, Responsibility and Ethics), TRUST (Transparency, Responsibility, User focus, Sustainability and Technology) and other relevant principles. Furthermore, a greater focus on data justice could help counteract global power imbalances and ensure equitable data access for all, including marginalized communities.</li>
+  <li><strong>Contextualized communication:</strong> The communication of open science monitoring outcomes should be carefully tailored to prevent oversimplification and misinterpretation, ensuring clarity and relevance for all stakeholders. This includes providing clear, accessible explanations of indicators and conclusions to promote understanding and engagement from the general public.</li>
+  <li><strong>Disclosure of conflicts of interest:</strong> Open science actors should disclose any conflict of interest when monitoring is undertaken.</li>
+</ol>
+                          "))
                      ),
                      
                      # ----- Accordion 3: Self-Assessment and Responsible Use -----
@@ -1217,14 +1772,16 @@ tabItem(tabName = "principles",
                                                "Part 3: Self-Assessment and Responsible Use"
                                   ),
                                   div(class = "accordion-content", HTML("
-            <ul>
-              <li><strong>Self-evaluation:</strong> Regularly assess and disclose alignment with these principles.</li>
-              <li><strong>Revision:</strong> Continuously improve and adapt indicators over time.</li>
-              <li><strong>Environmental responsibility:</strong> Reduce monitoring system impact.</li>
-              <li><strong>Long-term sustainability:</strong> Plan for funding, access and infrastructure.</li>
-              <li><strong>Constructive comparison:</strong> Avoid rankings, encourage fair benchmarking.</li>
-            </ul>
-          "))
+<p><strong>Open science monitoring initiatives should aim for continuous improvement through regular self-assessments and alignment with these Principles of Open Science Monitoring.</strong> Importantly, open science monitoring should be used to understand and incentivise open science practices. It should not be used in isolation to evaluate individual researchers but instead as part of a multifaceted approach to assist institutions, stakeholders, academic and non-academic communities in understanding and improving their research practices. Therefore, to the extent possible, open science monitoring initiatives should integrate:</p>
+
+<ol>
+  <li><strong>Self-evaluation against the Principles of Open Science Monitoring:</strong> Monitoring initiatives should ideally regularly assess and publicly disclose their compliance with these Principles. Where full compliance has not yet been achieved, initiatives should clearly outline a path towards future compliance, demonstrating a commitment to continuous improvement.</li>
+  <li><strong>Regular revision:</strong> Indicators should be regularly assessed and revised as conceptual and technical specifications may evolve over time. Since indicators can lead to unintended consequences, it is essential to regularly review and update indicators and methodologies to mitigate such risks. Revision processes should include feedback loops to promote transparency, inclusivity, and responsiveness to emerging challenges. Indicators that are no longer aligned with the initial monitoring objective can be discontinued or replaced.</li>
+  <li><strong>Environmental responsibility:</strong> Open science monitoring initiatives should evaluate and limit the environmental impacts of monitoring systems.</li>
+  <li><strong>Long-term sustainability:</strong> Monitoring initiatives should have plans for their sustainability, including commitments to long-term funding, training, and infrastructure support, capacity-building or, in the case of short-term activities, long-term accessibility of their outputs. A long-term vision with clear goals and milestones should guide their ongoing development.</li>
+  <li><strong>Constructive comparison:</strong> In line with the 2021 UNESCO Recommendation on Open Science and in accordance with internationally-agreed best practices for research monitoring and evaluation, indicators should not be used to create rankings or make uncontextualized comparisons of research organizations, researchers, or other individuals or groups. Monitoring mechanisms should ideally emphasize equity-oriented comparisons that reflect contextual nuances and avoid reinforcing structural inequalities.</li>
+</ol>
+                          "))
                      ),
                      
                      # ---- Footer with Source Link ----
@@ -1241,28 +1798,101 @@ tabItem(tabName = "principles",
           )
         ),
         
+        
+        
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
 ),
@@ -1348,27 +1978,98 @@ tabItem(tabName = "mca",
         ),
         
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
 ),    
@@ -1440,27 +2141,98 @@ tabItem(tabName = "hcpc",
         ),
         
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
 ),
@@ -1513,27 +2285,98 @@ tabItem(tabName = "monitoring",
         ),
         
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
 ),
@@ -1556,27 +2399,98 @@ tabItem(tabName = "about",
         ),
         
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
 ),
@@ -1598,30 +2512,224 @@ tabItem(tabName = "FAQs",
           )
          ),
         # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
         fluidRow(
           tags$div(
-            style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
             
-            # Logos avec liens 
-            tags$a(
-              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-              target = "_blank",
-              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
             ),
-            tags$a(
-              href = "https://www.gemass.fr/contract/openit/",
-              target = "_blank",
-              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
             )
-            # ,
-            # tags$a(
-            #   href = "https://open-science-monitoring.org/",
-            #   target = "_blank",
-            #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-            # )
           )
         )
+        
+    ),
+
+# --------------------------------------------------
+# Methods Tab: (Embedded Google Doc)
+# --------------------------------------------------
+tabItem(tabName = "Method",
+        fluidRow(
+          div(
+            style = "padding: 20px; text-align: center; font-size: 18px;",
+            tags$p(tags$strong("Methodological Background")),
+            tags$iframe(
+              src = "https://docs.google.com/document/d/14G8cpONSY4E3XoEq3hpSvflndpH0-qLU47P-rmA7UFo/preview",
+              width = "100%",
+              height = "800px",
+              style = "border: none;"
+            )
+          )
+        ),
+        # Bande horizontale claire avec logos cliquables
+        # fluidRow(
+        #   tags$div(
+        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
+        #     
+        #     # Logos avec liens 
+        #     tags$a(
+        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+        #       target = "_blank",
+        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
+        #     ),
+        #     tags$a(
+        #       href = "https://www.gemass.fr/contract/openit/",
+        #       target = "_blank",
+        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
+        #     )
+        #     # ,
+        #     # tags$a(
+        #     #   href = "https://open-science-monitoring.org/",
+        #     #   target = "_blank",
+        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
+        #     # )
+        #   )
+        # )
+        fluidRow(
+          tags$div(
+            style = "
+      width: 100%; 
+      background-color: #ffffff; 
+      padding: 15px 0; 
+      border-top: 1px solid #ddd; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+    ",
+            
+            # Bloc gauche (logos)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+                target = "_blank",
+                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+                         style = "height:65px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+                         style = "height:70px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/",
+                target = "_blank",
+                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.sorbonne-universite.fr/",
+                target = "_blank",
+                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+                         style = "height:30px; margin: 0 15px;")
+              ),
+              tags$a(
+                href = "https://www.cnrs.fr",
+                target = "_blank",
+                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+                         style = "height:40px; margin: 0 15px;")
+              )
+            ),
+            
+            # Bloc droit (QR codes)
+            tags$div(
+              style = "display: flex; align-items: center;",
+              tags$a(
+                href = "https://amcm.shinyapps.io/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://www.gemass.fr/contract/openit/",
+                target = "_blank",
+                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+                         style = "height:100px; margin: 0 10px;")
+              ),
+              tags$a(
+                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+                target = "_blank",
+                tags$img(src = "qr-code github.png", alt = "GitHub", 
+                         style = "height:100px; margin: 0 10px;")
+              )
+            )
+          )
         )
+        
+)
+
+
+
+
+
+
+
+
       )
     )
   )
@@ -1685,6 +2793,9 @@ server <- function(input, output, session) {
   })
   observeEvent(input$goto_faqs, {
     updateTabItems(session, "tabs", "FAQs")
+  })
+  observeEvent(input$goto_method, {
+    updateTabItems(session, "tabs", "Method")
   })
   observeEvent(input$go_overview, {
     updateTabItems(session, inputId = "tabs", selected = "overview")
@@ -2249,4 +3360,3 @@ shinyApp(ui = ui, server = server)
 
 # To deploy the app online 
 # rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
-
