@@ -30,6 +30,12 @@ library(shinyWidgets)
 library(bslib)
 library(colorspace)
 
+library(shinydashboard)
+library(shinycssloaders)
+
+library(reactable)
+library(htmltools)
+
 #######################
 # Set up Shiny app credentials -----
 #######################
@@ -151,9 +157,233 @@ popup_css <- "
 "
 
 #######################
-monitoring_data <- function() {
-  read_sheet("https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo", sheet = "Monitors")
+# monitoring_data <- function() {
+#   read_sheet("https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo", sheet = "Monitors")
+# }
+
+# --------------------------------------------------
+# Monitoring data import ----
+# --------------------------------------------------
+
+monitoring_sheet_url <- "https://docs.google.com/spreadsheets/d/1bhYjxW2_b447wv4vBZWrsQt9Wk1L2wnWDk9GbhobE5I/edit?gid=0#gid=0&fvid=776713111"
+
+raw_monitoring <- read_sheet(
+  monitoring_sheet_url,
+  sheet = 1,
+  col_types = "cccccccccccccccccc"
+)
+
+# --------------------------------------------------
+# Helpers ----
+# --------------------------------------------------
+
+split_multi_values <- function(x) {
+  if (length(x) == 0 || is.null(x) || is.na(x) || x == "") {
+    return(character(0))
+  }
+  
+  x <- as.character(x)
+  
+  x %>%
+    stringr::str_replace_all("\n", ";") %>%
+    stringr::str_replace_all("\\|", ";") %>%
+    stringr::str_split(";") %>%
+    unlist() %>%
+    stringr::str_squish() %>%
+    .[. != ""] %>%
+    unique()
 }
+
+extract_start_year <- function(x) {
+  ifelse(
+    is.na(x),
+    NA_integer_,
+    stringr::str_extract(x, "(19|20)\\d{2}") |> as.integer()
+  )
+}
+
+recode_compliance <- function(x) {
+  dplyr::case_when(
+    is.na(x) ~ "Unclear",
+    stringr::str_detect(stringr::str_to_lower(x), "yes|enforcement|compliance|accountability|mandate") ~ "Yes",
+    stringr::str_detect(stringr::str_to_lower(x), "no|not used") ~ "No",
+    TRUE ~ "Unclear"
+  )
+}
+
+`%||%` <- function(x, y) {
+  if (is.null(x) || length(x) == 0 || is.na(x) || x == "") y else x
+}
+
+# --------------------------------------------------
+# Monitoring data cleaning ----
+# --------------------------------------------------
+
+monitoring_main <- raw_monitoring %>%
+  transmute(
+    initiative_name = `Initiative Name`,
+    initiative_url = `Initiative URL / Access Link`,
+    details_added_by = `Details Added by`,
+    description = `Brief Description of the Initiative and its Goal or Intent`,
+    scope = `Operational Scope of Monitoring Coverage`,
+    region = `Geographical Region of Monitoring Coverage`,
+    country = `Country of Monitoring Coverage`,
+    lead_org_type = `Lead Organisation(s) Type`,
+    lead_org_name = `Lead Organisation(s) Name`,
+    contact_link = `Contact information link`,
+    year_raw = `Year Monitoring Initiative Started  / ended`,
+    operational_status = `Operational Status`,
+    pillars_raw = `Open Science Focus / Pillars Monitored`,
+    data_sources_raw = `Data types/sources used for Monitoring`,
+    mechanism_raw = `Monitoring Mechanism / Approach`,
+    intended_use_raw = `Intended Use of Monitoring Results`,
+    compliance_raw = `Use of Monitoring Results for Compliance or Enforcement`,
+    notes = Notes,
+    id = dplyr::row_number()
+  ) %>%
+  mutate(
+    across(where(is.character), ~ stringr::str_squish(.x)),
+    across(where(is.character), ~ na_if(.x, "")),
+    start_year = extract_start_year(year_raw),
+    compliance_flag = recode_compliance(compliance_raw),
+    search_text = stringr::str_to_lower(paste(
+      initiative_name,
+      description,
+      scope,
+      region,
+      country,
+      lead_org_type,
+      lead_org_name,
+      pillars_raw,
+      data_sources_raw,
+      mechanism_raw,
+      intended_use_raw,
+      compliance_raw,
+      notes,
+      sep = " "
+    ))
+  )
+
+print(dim(monitoring_main))
+print(names(monitoring_main))
+print(summary(monitoring_main$start_year))
+print(table(monitoring_main$compliance_flag, useNA = "ifany"))
+
+
+monitoring_pillars_long <- monitoring_main %>%
+  transmute(id, value = purrr::map(pillars_raw, split_multi_values)) %>%
+  tidyr::unnest(value) %>%
+  dplyr::rename(pillar = value)
+
+monitoring_mechanisms_long <- monitoring_main %>%
+  transmute(id, value = purrr::map(mechanism_raw, split_multi_values)) %>%
+  tidyr::unnest(value) %>%
+  dplyr::rename(mechanism = value)
+
+monitoring_uses_long <- monitoring_main %>%
+  transmute(id, value = purrr::map(intended_use_raw, split_multi_values)) %>%
+  tidyr::unnest(value) %>%
+  dplyr::rename(intended_use = value)
+
+monitoring_sources_long <- monitoring_main %>%
+  transmute(id, value = purrr::map(data_sources_raw, split_multi_values)) %>%
+  tidyr::unnest(value) %>%
+  dplyr::rename(data_source = value)
+
+
+pillars_summary <- monitoring_pillars_long %>%
+  group_by(id) %>%
+  summarise(pillars = paste(unique(pillar), collapse = " | "), .groups = "drop")
+
+mechanisms_summary <- monitoring_mechanisms_long %>%
+  group_by(id) %>%
+  summarise(mechanisms = paste(unique(mechanism), collapse = " | "), .groups = "drop")
+
+uses_summary <- monitoring_uses_long %>%
+  group_by(id) %>%
+  summarise(intended_uses = paste(unique(intended_use), collapse = " | "), .groups = "drop")
+
+monitoring_display <- monitoring_main %>%
+  left_join(pillars_summary, by = "id") %>%
+  left_join(mechanisms_summary, by = "id") %>%
+  left_join(uses_summary, by = "id") %>%
+  mutate(
+    pillars = dplyr::coalesce(pillars, ""),
+    mechanisms = dplyr::coalesce(mechanisms, ""),
+    intended_uses = dplyr::coalesce(intended_uses, "")
+  )
+
+print(dim(monitoring_pillars_long))
+print(dim(monitoring_mechanisms_long))
+print(dim(monitoring_uses_long))
+print(dim(monitoring_display))
+
+
+# --------------------------------------------------
+# Capitals data for map ----
+# --------------------------------------------------
+
+capital_sheet_url <- "https://docs.google.com/spreadsheets/d/1qunnGs7imbXDFEPg0-6ioXM7HwgeJPamwG_qky6mx6g"
+
+capitals_raw <- read_sheet(
+  capital_sheet_url,
+  sheet = 1
+)
+
+capitals <- capitals_raw %>%
+  transmute(
+    country_map = Country,
+    capital = `Capital City`,
+    lat = as.numeric(Latitude),
+    lng = as.numeric(Longitude)
+  )
+
+# --------------------------------------------------
+# Country harmonisation ----
+# --------------------------------------------------
+
+recode_country_names <- function(x) {
+  dplyr::case_when(
+    is.na(x) ~ NA_character_,
+    x == "UK" ~ "United Kingdom",
+    x == "United States" ~ "United States",
+    x == "USA" ~ "United States",
+    x == "Czech Republic" ~ "Czechia",
+    x == "South Korea" ~ "Korea, South",
+    x == "Republic of Korea" ~ "Korea, South",
+    x == "North Korea" ~ "Korea, North",
+    x == "Russia" ~ "Russian Federation",
+    x == "Moldova" ~ "Moldova, Republic of",
+    x == "Iran" ~ "Iran, Islamic Republic of",
+    x == "Syria" ~ "Syrian Arab Republic",
+    x == "Venezuela" ~ "Venezuela, Bolivarian Republic of",
+    x == "Bolivia" ~ "Bolivia, Plurinational State of",
+    x == "Tanzania" ~ "Tanzania, United Republic of",
+    x == "Brunei" ~ "Brunei Darussalam",
+    x == "Laos" ~ "Lao People's Democratic Republic",
+    x == "Vietnam" ~ "Viet Nam",
+    x == "Palestine" ~ "Palestine, State of",
+    TRUE ~ x
+  )
+}
+
+
+monitoring_display <- monitoring_display %>%
+  mutate(
+    country_map = recode_country_names(country)
+  )
+
+# --------------------------------------------------
+# World polygons for choropleth ----
+# --------------------------------------------------
+
+world_sf <- rnaturalearth::ne_countries(
+  scale = "medium",
+  returnclass = "sf"
+) %>%
+  dplyr::select(admin, geometry) %>%
+  dplyr::rename(country_map = admin)
+
 
 #######################
 df_focus <- function() {
@@ -2240,145 +2470,1395 @@ tabItem(tabName = "hcpc",
 # --------------------------------------------------
 # Monitoring Tab: Monitoring Landscape Table -----
 # --------------------------------------------------
-tabItem(tabName = "monitoring",
-        fluidRow(
-          # ---- Table 1: Global Monitoring Initiatives ----
-          box(
-            title = "Open Science Monitoring Initiatives",
-            status = "primary",
-            solidHeader = TRUE,
-            width = 12,
-            DT::dataTableOutput("monitoring_table"),
-            tags$p(
-              "This interactive table lists various national, international, institutional, and specialized initiatives monitoring open science. Click on a column header to sort or use the search bar to filter."
+# tabItem(tabName = "monitoring",
+#         fluidRow(
+#           # ---- Table 1: Global Monitoring Initiatives ----
+#           box(
+#             title = "Open Science Monitoring Initiatives",
+#             status = "primary",
+#             solidHeader = TRUE,
+#             width = 12,
+#             DT::dataTableOutput("monitoring_table"),
+#             tags$p(
+#               "This interactive table lists various national, international, institutional, and specialized initiatives monitoring open science. Click on a column header to sort or use the search bar to filter."
+#             ),
+#             tags$a(
+#               href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1576141174#gid=1576141174",
+#               target = "_blank",
+#               "📥 View or edit full Google Sheet here",
+#               style = "display:inline-block; margin-top:10px; font-size:16px;"
+#             )
+#           )
+#         ),
+#         
+#         fluidRow(
+#           # ---- Table 2: Regional Focus Table ----
+#           box(
+#             title = tagList(icon("globe"), "Focus by country/region: Open Science Initiatives"),
+#             width = 12,
+#             status = "primary",
+#             solidHeader = TRUE,
+#             collapsible = TRUE,
+#             collapsed = FALSE,
+#             DT::dataTableOutput("focus_table"),
+#             tags$p(
+#               "This table presents major open science initiatives, including national dashboards, infrastructures, funding programmes, and collaborative platforms. It offers an entry point to explore regional efforts and synergies in open science.",
+#               style = "margin-top:10px; font-size:15px;"
+#             ),
+#             tags$a(
+#               href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=2146313781#gid=2146313781",
+#               target = "_blank",
+#               "📥 View or edit full Google Sheet here",
+#               style = "display:inline-block; margin-top:10px; font-size:16px;"
+#             )
+#           )
+#         ),
+#         
+#         fluidRow(
+#           tags$div(
+#             style = "
+#       width: 100%; 
+#       background-color: #ffffff; 
+#       padding: 15px 0; 
+#       border-top: 1px solid #ddd; 
+#       display: flex; 
+#       justify-content: space-between; 
+#       align-items: center;
+#     ",
+#             
+#             # Bloc gauche (logos)
+#             tags$div(
+#               style = "display: flex; align-items: center;",
+#               tags$a(
+#                 href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+#                 target = "_blank",
+#                 tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
+#                          style = "height:65px; margin: 0 15px;")
+#               ),
+#               tags$a(
+#                 href = "https://www.gemass.fr/contract/openit/",
+#                 target = "_blank",
+#                 tags$img(src = "logo-transparent.png", alt = "OPENIT", 
+#                          style = "height:70px; margin: 0 15px;")
+#               ),
+#               tags$a(
+#                 href = "https://www.gemass.fr/",
+#                 target = "_blank",
+#                 tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
+#                          style = "height:30px; margin: 0 15px;")
+#               ),
+#               tags$a(
+#                 href = "https://www.sorbonne-universite.fr/",
+#                 target = "_blank",
+#                 tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
+#                          style = "height:30px; margin: 0 15px;")
+#               ),
+#               tags$a(
+#                 href = "https://www.cnrs.fr",
+#                 target = "_blank",
+#                 tags$img(src = "logo_cnrs.png", alt = "cnrs", 
+#                          style = "height:40px; margin: 0 15px;")
+#               )
+#             ),
+#             
+#             # Bloc droit (QR codes)
+#             tags$div(
+#               style = "display: flex; align-items: center;",
+#               tags$a(
+#                 href = "https://amcm.shinyapps.io/openit/",
+#                 target = "_blank",
+#                 tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
+#                          style = "height:100px; margin: 0 10px;")
+#               ),
+#               tags$a(
+#                 href = "https://www.gemass.fr/contract/openit/",
+#                 target = "_blank",
+#                 tags$img(src = "qr-code openit.png", alt = "OpenIT", 
+#                          style = "height:100px; margin: 0 10px;")
+#               ),
+#               tags$a(
+#                 href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+#                 target = "_blank",
+#                 tags$img(src = "qr-code github.png", alt = "GitHub", 
+#                          style = "height:100px; margin: 0 10px;")
+#               )
+#             )
+#           )
+#         )
+# ),
+
+# --------------------------------------------------
+# Monitoring Tab ----
+# --------------------------------------------------
+
+# tabItem(
+#   tabName = "monitoring",
+#   
+#   fluidRow(
+#     box(
+#       title = tagList(icon("compass"), "Monitoring Landscape"),
+#       status = "primary",
+#       solidHeader = TRUE,
+#       width = 12,
+#       tags$p(
+#         HTML("Explore, compare and interrogate open science monitoring initiatives across countries, organisations, monitoring methods and policy uses. 
+#        The data presented here are entirely derived from the work of the <b>OSMI Working Group 2: Understanding the Open Science Monitoring Landscape</b>. 
+#        More information is available <a href='https://open-science-monitoring.org/working-groups/wg2-understanding-the-open-science-monitoring-landscape/' target='_blank'>here</a>."),
+#         style = "font-size:15px; margin-bottom:8px;"
+#       ),
+#       tags$a(
+#         href = monitoring_sheet_url,
+#         target = "_blank",
+#         "📥 View or edit source spreadsheet",
+#         style = "font-size:15px;"
+#       )
+#     )
+#   ),
+#   
+#   fluidRow(
+#     valueBoxOutput("monitoring_kpi_total", width = 2),
+#     valueBoxOutput("monitoring_kpi_countries", width = 2),
+#     valueBoxOutput("monitoring_kpi_scope", width = 2),
+#     valueBoxOutput("monitoring_kpi_compliance", width = 2),
+#     valueBoxOutput("monitoring_kpi_top_pillar", width = 2),
+#     valueBoxOutput("monitoring_kpi_years", width = 2)
+#   ),
+#   
+#   fluidRow(
+#     box(
+#       title = tagList(icon("filter"), "Filters"),
+#       status = "warning",
+#       solidHeader = TRUE,
+#       width = 3,
+#       
+#       textInput(
+#         "monitoring_search",
+#         "Search",
+#         placeholder = "initiative, keyword, organisation, country..."
+#       ),
+#       
+#       pickerInput(
+#         "monitoring_scope",
+#         "Scope",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+#       ),
+#       
+#       pickerInput(
+#         "monitoring_region",
+#         "Region",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+#       ),
+#       
+#       pickerInput(
+#         "monitoring_country",
+#         "Country",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+#       ),
+#       
+#       pickerInput(
+#         "monitoring_org_type",
+#         "Lead organisation type",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+#       ),
+#       
+#       pickerInput(
+#         "monitoring_status",
+#         "Operational status",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE)
+#       ),
+#       
+#       uiOutput("monitoring_year_ui"),
+#       
+#       pickerInput(
+#         "monitoring_pillar",
+#         "Open science pillar",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+#       ),
+#       
+#       pickerInput(
+#         "monitoring_mechanism",
+#         "Monitoring mechanism",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+#       ),
+#       
+#       pickerInput(
+#         "monitoring_use",
+#         "Intended use",
+#         choices = NULL,
+#         multiple = TRUE,
+#         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+#       ),
+#       
+#       radioButtons(
+#         "monitoring_compliance",
+#         "Compliance / enforcement",
+#         choices = c("All", "Yes", "No", "Unclear"),
+#         selected = "All"
+#       ),
+#       
+#       br(),
+#       
+#       actionButton(
+#         "monitoring_reset",
+#         "Reset filters",
+#         icon = icon("rotate-left")
+#       ),
+#       
+#       br(), br(),
+#       
+#       downloadButton("monitoring_download", "Download filtered data")
+#     ),
+#     
+#     box(
+#       title = tagList(icon("chart-column"), "Explore"),
+#       status = "primary",
+#       solidHeader = TRUE,
+#       width = 6,
+#       
+#       tabsetPanel(
+#         id = "monitoring_tabs",
+#         
+#         tabPanel(
+#           "Overview",
+#           br(),
+#           fluidRow(
+#             box(
+#               title = "Top monitored pillars",
+#               status = "primary",
+#               solidHeader = TRUE,
+#               width = 6,
+#               plotlyOutput("monitoring_plot_pillars", height = 280) %>% withSpinner()
+#             ),
+#             box(
+#               title = "Lead organisation types",
+#               status = "success",
+#               solidHeader = TRUE,
+#               width = 6,
+#               plotlyOutput("monitoring_plot_orgs", height = 280) %>% withSpinner()
+#             )
+#           ),
+#           fluidRow(
+#             box(
+#               title = "Timeline of initiatives",
+#               status = "success",
+#               solidHeader = TRUE,
+#               width = 6,
+#               plotlyOutput("monitoring_plot_timeline", height = 280) %>% withSpinner()
+#             ),
+#             box(
+#               title = "Intended uses of monitoring",
+#               status = "danger",
+#               solidHeader = TRUE,
+#               width = 6,
+#               plotlyOutput("monitoring_plot_uses", height = 280) %>% withSpinner()
+#             )
+#           ),
+#           fluidRow(
+#             box(
+#               title = "Analytical summary",
+#               status = "warning",
+#               solidHeader = FALSE,
+#               width = 12,
+#               htmlOutput("monitoring_summary_text")
+#             )
+#           )
+#         ),
+#         
+#         tabPanel(
+#           "Compare",
+#           br(),
+#           fluidRow(
+#             column(
+#               4,
+#               selectInput(
+#                 "monitoring_compare_rows",
+#                 "Rows",
+#                 choices = c(
+#                   "scope",
+#                   "region",
+#                   "lead_org_type",
+#                   "compliance_flag",
+#                   "operational_status"
+#                 ),
+#                 selected = "scope"
+#               )
+#             ),
+#             column(
+#               4,
+#               selectInput(
+#                 "monitoring_compare_cols",
+#                 "Columns",
+#                 choices = c(
+#                   "pillar",
+#                   "mechanism",
+#                   "intended_use",
+#                   "lead_org_type",
+#                   "compliance_flag"
+#                 ),
+#                 selected = "pillar"
+#               )
+#             ),
+#             column(
+#               4,
+#               tags$label("Selection"),
+#               tags$p("Click a cell in the matrix to inspect matching initiatives.")
+#             )
+#           ),
+#           fluidRow(
+#             box(
+#               title = "Comparison matrix",
+#               status = "info",
+#               solidHeader = TRUE,
+#               width = 12,
+#               plotlyOutput("monitoring_compare_heatmap", height = 420) %>% withSpinner()
+#             )
+#           ),
+#           fluidRow(
+#             box(
+#               title = "Initiatives in selected cell",
+#               status = "success",
+#               solidHeader = TRUE,
+#               width = 12,
+#               reactableOutput("monitoring_compare_table")
+#             )
+#           )
+#         ),
+#         
+#         tabPanel(
+#           "Map",
+#           br(),
+#           fluidRow(
+#             box(
+#               title = "Geographical coverage",
+#               status = "info",
+#               solidHeader = TRUE,
+#               width = 12,
+#               leafletOutput("monitoring_map", height = 500) %>% withSpinner()
+#             )
+#           ),
+#           fluidRow(
+#             box(
+#               title = "Selected geography",
+#               status = "primary",
+#               solidHeader = TRUE,
+#               width = 12,
+#               reactableOutput("monitoring_map_table")
+#             )
+#           )
+#         ),
+#         
+#         tabPanel(
+#           "Directory",
+#           br(),
+#           fluidRow(
+#             box(
+#               title = "Monitoring initiatives directory",
+#               status = "info",
+#               solidHeader = TRUE,
+#               width = 12,
+#               reactableOutput("monitoring_directory_table") %>% withSpinner()
+#             )
+#           )
+#         )
+#       )
+#     ),
+#     
+#     box(
+#       title = tagList(icon("circle-info"), "Initiative details"),
+#       status = "success",
+#       solidHeader = TRUE,
+#       width = 3,
+#       htmlOutput("monitoring_details_panel")
+#     )
+#   ),
+#   
+#   fluidRow(
+#     tags$div(
+#       style = "
+#         width: 100%;
+#         background-color: #ffffff;
+#         padding: 15px 0;
+#         border-top: 1px solid #ddd;
+#         display: flex;
+#         justify-content: space-between;
+#         align-items: center;
+#       ",
+#       
+#       tags$div(
+#         style = "display: flex; align-items: center;",
+#         tags$a(
+#           href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+#           target = "_blank",
+#           tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px;")
+#         ),
+#         tags$a(
+#           href = "https://www.gemass.fr/contract/openit/",
+#           target = "_blank",
+#           tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px;")
+#         ),
+#         tags$a(
+#           href = "https://www.gemass.fr/",
+#           target = "_blank",
+#           tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", style = "height:30px; margin: 0 15px;")
+#         ),
+#         tags$a(
+#           href = "https://www.sorbonne-universite.fr/",
+#           target = "_blank",
+#           tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", style = "height:30px; margin: 0 15px;")
+#         ),
+#         tags$a(
+#           href = "https://www.cnrs.fr",
+#           target = "_blank",
+#           tags$img(src = "logo_cnrs.png", alt = "cnrs", style = "height:40px; margin: 0 15px;")
+#         )
+#       ),
+#       
+#       tags$div(
+#         style = "display: flex; align-items: center;",
+#         tags$a(
+#           href = "https://amcm.shinyapps.io/openit/",
+#           target = "_blank",
+#           tags$img(src = "qr-code dashboard.png", alt = "Dashboard", style = "height:100px; margin: 0 10px;")
+#         ),
+#         tags$a(
+#           href = "https://www.gemass.fr/contract/openit/",
+#           target = "_blank",
+#           tags$img(src = "qr-code openit.png", alt = "OpenIT", style = "height:100px; margin: 0 10px;")
+#         ),
+#         tags$a(
+#           href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+#           target = "_blank",
+#           tags$img(src = "qr-code github.png", alt = "GitHub", style = "height:100px; margin: 0 10px;")
+#         )
+#       )
+#     )
+#   )
+# ),
+
+# --------------------------------------------------
+# Monitoring Tab ----
+# --------------------------------------------------
+
+tabItem(
+  tabName = "monitoring",
+  
+  tags$head(
+    tags$style(HTML("
+      @media (max-width: 1200px) {
+        .content-wrapper, .right-side {
+          overflow-x: hidden;
+        }
+        .small-box h3 {
+          font-size: 28px !important;
+        }
+        .small-box p {
+          font-size: 16px !important;
+        }
+      }
+
+      @media (max-width: 992px) {
+        .box {
+          margin-bottom: 15px;
+        }
+        .nav-tabs > li > a {
+          font-size: 14px;
+          padding: 8px 10px;
+        }
+        .small-box h3 {
+          font-size: 24px !important;
+        }
+        .small-box p {
+          font-size: 14px !important;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .content {
+          padding: 8px !important;
+        }
+        .box-header .box-title {
+          font-size: 18px !important;
+        }
+        .small-box {
+          min-height: 110px;
+        }
+        .small-box h3 {
+          font-size: 22px !important;
+        }
+        .small-box p {
+          font-size: 13px !important;
+        }
+        .nav-tabs > li {
+          float: none !important;
+          width: 100%;
+        }
+        .nav-tabs > li > a {
+          display: block;
+          width: 100%;
+        }
+      }
+
+      .monitoring-wrap .box {
+        margin-bottom: 16px;
+      }
+
+      .monitoring-wrap .small-box {
+        margin-bottom: 16px;
+      }
+
+      .monitoring-footer {
+        width: 100%;
+        background-color: #ffffff;
+        padding: 15px 0;
+        border-top: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 18px;
+      }
+
+      .monitoring-footer-left,
+      .monitoring-footer-right {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .monitoring-footer img {
+        max-width: 100%;
+        height: auto;
+      }
+    "))
+  ),
+  
+  div(
+    class = "monitoring-wrap",
+    
+    fluidRow(
+      column(
+        width = 12,
+        box(
+          title = tagList(icon("compass"), "Monitoring Landscape"),
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          tags$p(
+            HTML("Explore, compare and interrogate open science monitoring initiatives across countries, organisations, monitoring methods and policy uses.
+                 The data presented here are entirely derived from the work of the <b>OSMI Working Group 2: Understanding the Open Science Monitoring Landscape</b>.
+                 More information is available <a href='https://open-science-monitoring.org/working-groups/wg2-understanding-the-open-science-monitoring-landscape/' target='_blank'>here</a>."),
+            style = "font-size:15px; margin-bottom:8px;"
+          ),
+          tags$a(
+            href = monitoring_sheet_url,
+            target = "_blank",
+            "📥 View or edit source spreadsheet",
+            style = "font-size:15px;"
+          )
+        )
+      )
+    ),
+    
+    # fluidRow(
+    #   column(
+    #     width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+    #     valueBoxOutput("monitoring_kpi_total", width = 12)
+    #   ),
+    #   column(
+    #     width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+    #     valueBoxOutput("monitoring_kpi_countries", width = 12)
+    #   ),
+    #   column(
+    #     width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+    #     valueBoxOutput("monitoring_kpi_scope", width = 12)
+    #   ),
+    #   column(
+    #     width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+    #     valueBoxOutput("monitoring_kpi_compliance", width = 12)
+    #   ),
+    #   column(
+    #     width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+    #     valueBoxOutput("monitoring_kpi_top_pillar", width = 12)
+    #   ),
+    #   column(
+    #     width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+    #     valueBoxOutput("monitoring_kpi_years", width = 12)
+    #   )
+    # ),
+    
+    # ----------------------------
+    # KPI row 1
+    # ----------------------------
+    
+    fluidRow(
+      column(
+        width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+        valueBoxOutput("monitoring_kpi_total", width = 12)
+      ),
+      column(
+        width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+        valueBoxOutput("monitoring_kpi_countries", width = 12)
+      ),
+      column(
+        width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+        valueBoxOutput("monitoring_kpi_scope", width = 12)
+      ),
+      column(
+        width = 12, class = "col-lg-2 col-md-4 col-sm-6",
+        valueBoxOutput("monitoring_kpi_compliance", width = 12)
+      ),
+      column(
+        width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+        valueBoxOutput("monitoring_kpi_years", width = 12)
+      )
+    ),
+    
+    # ----------------------------
+    # KPI row 2 (analytical)
+    # ----------------------------
+    
+    fluidRow(
+      column(
+        width = 12,
+        valueBoxOutput("monitoring_kpi_top_pillar", width = 12)
+      )
+    ),
+    
+    # fluidRow(
+    #   column(
+    #     width = 12, class = "col-lg-3 col-md-12 col-sm-12",
+    #     box(
+    #       title = tagList(icon("filter"), "Filters"),
+    #       status = "warning",
+    #       solidHeader = TRUE,
+    #       width = 12,
+    #       
+    #       textInput(
+    #         "monitoring_search",
+    #         "Search",
+    #         placeholder = "initiative, keyword, organisation, country..."
+    #       ),
+    #       
+    #       pickerInput(
+    #         "monitoring_scope",
+    #         "Scope",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+    #       ),
+    #       
+    #       pickerInput(
+    #         "monitoring_region",
+    #         "Region",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+    #       ),
+    #       
+    #       pickerInput(
+    #         "monitoring_country",
+    #         "Country",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+    #       ),
+    #       
+    #       pickerInput(
+    #         "monitoring_org_type",
+    #         "Lead organisation type",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+    #       ),
+    #       
+    #       pickerInput(
+    #         "monitoring_status",
+    #         "Operational status",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE)
+    #       ),
+    #       
+    #       uiOutput("monitoring_year_ui"),
+    #       
+    #       pickerInput(
+    #         "monitoring_pillar",
+    #         "Open science pillar",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+    #       ),
+    #       
+    #       pickerInput(
+    #         "monitoring_mechanism",
+    #         "Monitoring mechanism",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+    #       ),
+    #       
+    #       pickerInput(
+    #         "monitoring_use",
+    #         "Intended use",
+    #         choices = character(0),
+    #         multiple = TRUE,
+    #         options = list(`actions-box` = TRUE, `live-search` = TRUE)
+    #       ),
+    #       
+    #       radioButtons(
+    #         "monitoring_compliance",
+    #         "Compliance / enforcement",
+    #         choices = c("All", "Yes", "No", "Unclear"),
+    #         selected = "All"
+    #       ),
+    #       
+    #       br(),
+    #       
+    #       actionButton(
+    #         "monitoring_reset",
+    #         "Reset filters",
+    #         icon = icon("refresh")
+    #       ),
+    #       
+    #       br(), br(),
+    #       
+    #       downloadButton("monitoring_download", "Download filtered data")
+    #     )
+    #   ),
+    fluidRow(
+      column(
+        width = 12,
+        box(
+          title = tagList(icon("filter"), "Filters"),
+          status = "warning",
+          solidHeader = TRUE,
+          width = 12,
+          
+          fluidRow(
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              textInput(
+                "monitoring_search",
+                "Search",
+                placeholder = "initiative, keyword, organisation, country..."
+              )
             ),
-            tags$a(
-              href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=1576141174#gid=1576141174",
-              target = "_blank",
-              "📥 View or edit full Google Sheet here",
-              style = "display:inline-block; margin-top:10px; font-size:16px;"
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_scope",
+                "Scope",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE, `live-search` = TRUE)
+              )
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_region",
+                "Region",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE, `live-search` = TRUE)
+              )
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_country",
+                "Country",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE, `live-search` = TRUE)
+              )
+            )
+          ),
+          
+          fluidRow(
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_org_type",
+                "Lead organisation type",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE, `live-search` = TRUE)
+              )
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_status",
+                "Operational status",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE)
+              )
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              uiOutput("monitoring_year_ui")
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_pillar",
+                "Open science pillar",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE, `live-search` = TRUE)
+              )
+            )
+          ),
+          
+          fluidRow(
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_mechanism",
+                "Monitoring mechanism",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE, `live-search` = TRUE)
+              )
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              pickerInput(
+                "monitoring_use",
+                "Intended use",
+                choices = character(0),
+                multiple = TRUE,
+                options = list(`actions-box` = TRUE, `live-search` = TRUE)
+              )
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              radioButtons(
+                "monitoring_compliance",
+                "Compliance / enforcement",
+                choices = c("All", "Yes", "No", "Unclear"),
+                selected = "All",
+                inline = TRUE
+              )
+            ),
+            column(
+              width = 12, class = "col-lg-3 col-md-6 col-sm-12",
+              br(),
+              actionButton(
+                "monitoring_reset",
+                "Reset filters",
+                icon = icon("refresh")
+              ),
+              br(), br(),
+              downloadButton("monitoring_download", "Download filtered data")
             )
           )
-        ),
-        
-        fluidRow(
-          # ---- Table 2: Regional Focus Table ----
-          box(
-            title = tagList(icon("globe"), "Focus by country/region: Open Science Initiatives"),
-            width = 12,
-            status = "primary",
-            solidHeader = TRUE,
-            collapsible = TRUE,
-            collapsed = FALSE,
-            DT::dataTableOutput("focus_table"),
-            tags$p(
-              "This table presents major open science initiatives, including national dashboards, infrastructures, funding programmes, and collaborative platforms. It offers an entry point to explore regional efforts and synergies in open science.",
-              style = "margin-top:10px; font-size:15px;"
-            ),
-            tags$a(
-              href = "https://docs.google.com/spreadsheets/d/1F2T_VfKAxvvGdna-nMOrIErM6bZnMXiirzMnsx-7YZo/edit?gid=2146313781#gid=2146313781",
-              target = "_blank",
-              "📥 View or edit full Google Sheet here",
-              style = "display:inline-block; margin-top:10px; font-size:16px;"
-            )
-          )
-        ),
-        
-        # Bande horizontale claire avec logos cliquables
-        # fluidRow(
-        #   tags$div(
-        #     style = "width: 100%; background-color: #ffffff; padding: 15px 0; text-align: center; border-top: 1px solid #ddd;",
-        #     
-        #     # Logos avec liens 
-        #     tags$a(
-        #       href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-        #       target = "_blank",
-        #       tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 15px; vertical-align: middle;")
-        #     ),
-        #     tags$a(
-        #       href = "https://www.gemass.fr/contract/openit/",
-        #       target = "_blank",
-        #       tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 15px; vertical-align: middle;")
-        #     )
-        #     # ,
-        #     # tags$a(
-        #     #   href = "https://open-science-monitoring.org/",
-        #     #   target = "_blank",
-        #     #   tags$img(src = "logo-osmi old.png", alt = "OSMI", style = "height:50px; margin: 0 15px; vertical-align: middle;")
-        #     # )
-        #   )
-        # )
-        fluidRow(
-          tags$div(
-            style = "
-      width: 100%; 
-      background-color: #ffffff; 
-      padding: 15px 0; 
-      border-top: 1px solid #ddd; 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center;
-    ",
+        )
+      )
+    ),
+    
+    #   column(
+    #     width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+    #     box(
+    #       title = tagList(icon("bar-chart"), "Explore"),
+    #       status = "primary",
+    #       solidHeader = TRUE,
+    #       width = 12,
+    #       
+    #       tabsetPanel(
+    #         id = "monitoring_tabs",
+    #         
+    #         tabPanel(
+    #           "Overview",
+    #           br(),
+    #           fluidRow(
+    #             column(
+    #               width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+    #               box(
+    #                 title = "Top monitored pillars",
+    #                 status = "primary",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 plotlyOutput("monitoring_plot_pillars", height = 280)
+    #               )
+    #             ),
+    #             column(
+    #               width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+    #               box(
+    #                 title = "Lead organisation types",
+    #                 status = "success",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 plotlyOutput("monitoring_plot_orgs", height = 280)
+    #               )
+    #             )
+    #           ),
+    #           fluidRow(
+    #             column(
+    #               width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+    #               box(
+    #                 title = "Timeline of initiatives",
+    #                 status = "success",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 plotlyOutput("monitoring_plot_timeline", height = 280)
+    #               )
+    #             ),
+    #             column(
+    #               width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+    #               box(
+    #                 title = "Intended uses of monitoring",
+    #                 status = "danger",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 plotlyOutput("monitoring_plot_uses", height = 280)
+    #               )
+    #             )
+    #           ),
+    #           fluidRow(
+    #             column(
+    #               width = 12,
+    #               box(
+    #                 title = "Analytical summary",
+    #                 status = "warning",
+    #                 solidHeader = FALSE,
+    #                 width = 12,
+    #                 htmlOutput("monitoring_summary_text")
+    #               )
+    #             )
+    #           )
+    #         ),
+    #         
+    #         tabPanel(
+    #           "Compare",
+    #           br(),
+    #           fluidRow(
+    #             column(
+    #               width = 12, class = "col-lg-4 col-md-12 col-sm-12",
+    #               selectInput(
+    #                 "monitoring_compare_rows",
+    #                 "Rows",
+    #                 choices = c(
+    #                   "scope",
+    #                   "region",
+    #                   "lead_org_type",
+    #                   "compliance_flag",
+    #                   "operational_status"
+    #                 ),
+    #                 selected = "scope"
+    #               )
+    #             ),
+    #             column(
+    #               width = 12, class = "col-lg-4 col-md-12 col-sm-12",
+    #               selectInput(
+    #                 "monitoring_compare_cols",
+    #                 "Columns",
+    #                 choices = c(
+    #                   "pillar",
+    #                   "mechanism",
+    #                   "intended_use",
+    #                   "lead_org_type",
+    #                   "compliance_flag"
+    #                 ),
+    #                 selected = "pillar"
+    #               )
+    #             ),
+    #             column(
+    #               width = 12, class = "col-lg-4 col-md-12 col-sm-12",
+    #               tags$label("Selection"),
+    #               tags$p("Click a cell in the matrix to inspect matching initiatives.")
+    #             )
+    #           ),
+    #           fluidRow(
+    #             column(
+    #               width = 12,
+    #               box(
+    #                 title = "Comparison matrix",
+    #                 status = "info",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 plotlyOutput("monitoring_compare_heatmap", height = 420)
+    #               )
+    #             )
+    #           ),
+    #           fluidRow(
+    #             column(
+    #               width = 12,
+    #               box(
+    #                 title = "Initiatives in selected cell",
+    #                 status = "success",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 reactableOutput("monitoring_compare_table")
+    #               )
+    #             )
+    #           )
+    #         ),
+    #         
+    #         tabPanel(
+    #           "Map",
+    #           br(),
+    #           fluidRow(
+    #             column(
+    #               width = 12,
+    #               box(
+    #                 title = "Geographical coverage",
+    #                 status = "info",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 leafletOutput("monitoring_map", height = 500)
+    #               )
+    #             )
+    #           ),
+    #           fluidRow(
+    #             column(
+    #               width = 12,
+    #               box(
+    #                 title = "Selected geography",
+    #                 status = "primary",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 reactableOutput("monitoring_map_table")
+    #               )
+    #             )
+    #           )
+    #         ),
+    #         
+    #         tabPanel(
+    #           "Directory",
+    #           br(),
+    #           fluidRow(
+    #             column(
+    #               width = 12,
+    #               box(
+    #                 title = "Monitoring initiatives directory",
+    #                 status = "info",
+    #                 solidHeader = TRUE,
+    #                 width = 12,
+    #                 reactableOutput("monitoring_directory_table")
+    #               )
+    #             )
+    #           )
+    #         )
+    #       )
+    #     )
+    #   ),
+    #   
+    #   column(
+    #     width = 12, class = "col-lg-3 col-md-12 col-sm-12",
+    #     box(
+    #       title = tagList(icon("info-circle"), "Initiative details"),
+    #       status = "success",
+    #       solidHeader = TRUE,
+    #       width = 12,
+    #       htmlOutput("monitoring_details_panel")
+    #     )
+    #   )
+    # ),
+    fluidRow(
+      column(
+        width = 12, class = "col-lg-8 col-md-12 col-sm-12",
+        box(
+          title = tagList(icon("bar-chart"), "Explore"),
+          status = "primary",
+          solidHeader = TRUE,
+          width = 12,
+          
+          tabsetPanel(
+            id = "monitoring_tabs",
             
-            # Bloc gauche (logos)
-            tags$div(
-              style = "display: flex; align-items: center;",
-              tags$a(
-                href = "https://anr.fr/Projet-ANR-24-RESO-0001",
-                target = "_blank",
-                tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", 
-                         style = "height:65px; margin: 0 15px;")
+            tabPanel(
+              "Overview",
+              br(),
+              fluidRow(
+                column(
+                  width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+                  box(
+                    title = "Top monitored pillars",
+                    status = "primary",
+                    solidHeader = TRUE,
+                    width = 12,
+                    plotlyOutput("monitoring_plot_pillars", height = 280)
+                  )
+                ),
+                column(
+                  width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+                  box(
+                    title = "Lead organisation types",
+                    status = "success",
+                    solidHeader = TRUE,
+                    width = 12,
+                    plotlyOutput("monitoring_plot_orgs", height = 280)
+                  )
+                )
               ),
-              tags$a(
-                href = "https://www.gemass.fr/contract/openit/",
-                target = "_blank",
-                tags$img(src = "logo-transparent.png", alt = "OPENIT", 
-                         style = "height:70px; margin: 0 15px;")
+              fluidRow(
+                column(
+                  width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+                  box(
+                    title = "Timeline of initiatives",
+                    status = "success",
+                    solidHeader = TRUE,
+                    width = 12,
+                    plotlyOutput("monitoring_plot_timeline", height = 280)
+                  )
+                ),
+                column(
+                  width = 12, class = "col-lg-6 col-md-12 col-sm-12",
+                  box(
+                    title = "Intended uses of monitoring",
+                    status = "danger",
+                    solidHeader = TRUE,
+                    width = 12,
+                    plotlyOutput("monitoring_plot_uses", height = 280)
+                  )
+                )
               ),
-              tags$a(
-                href = "https://www.gemass.fr/",
-                target = "_blank",
-                tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", 
-                         style = "height:30px; margin: 0 15px;")
-              ),
-              tags$a(
-                href = "https://www.sorbonne-universite.fr/",
-                target = "_blank",
-                tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", 
-                         style = "height:30px; margin: 0 15px;")
-              ),
-              tags$a(
-                href = "https://www.cnrs.fr",
-                target = "_blank",
-                tags$img(src = "logo_cnrs.png", alt = "cnrs", 
-                         style = "height:40px; margin: 0 15px;")
+              fluidRow(
+                column(
+                  width = 12,
+                  box(
+                    title = "Analytical summary",
+                    status = "warning",
+                    solidHeader = FALSE,
+                    width = 12,
+                    htmlOutput("monitoring_summary_text")
+                  )
+                )
               )
             ),
             
-            # Bloc droit (QR codes)
-            tags$div(
-              style = "display: flex; align-items: center;",
-              tags$a(
-                href = "https://amcm.shinyapps.io/openit/",
-                target = "_blank",
-                tags$img(src = "qr-code dashboard.png", alt = "Dashboard", 
-                         style = "height:100px; margin: 0 10px;")
+            tabPanel(
+              "Compare",
+              br(),
+              fluidRow(
+                column(
+                  width = 12, class = "col-lg-4 col-md-12 col-sm-12",
+                  selectInput(
+                    "monitoring_compare_rows",
+                    "Rows",
+                    choices = c(
+                      "scope",
+                      "region",
+                      "lead_org_type",
+                      "compliance_flag",
+                      "operational_status"
+                    ),
+                    selected = "scope"
+                  )
+                ),
+                column(
+                  width = 12, class = "col-lg-4 col-md-12 col-sm-12",
+                  selectInput(
+                    "monitoring_compare_cols",
+                    "Columns",
+                    choices = c(
+                      "pillar",
+                      "mechanism",
+                      "intended_use",
+                      "lead_org_type",
+                      "compliance_flag"
+                    ),
+                    selected = "pillar"
+                  )
+                ),
+                column(
+                  width = 12, class = "col-lg-4 col-md-12 col-sm-12",
+                  tags$label("Selection"),
+                  tags$p("Click a cell in the matrix to inspect matching initiatives.")
+                )
               ),
-              tags$a(
-                href = "https://www.gemass.fr/contract/openit/",
-                target = "_blank",
-                tags$img(src = "qr-code openit.png", alt = "OpenIT", 
-                         style = "height:100px; margin: 0 10px;")
+              fluidRow(
+                column(
+                  width = 12,
+                  box(
+                    title = "Comparison matrix",
+                    status = "info",
+                    solidHeader = TRUE,
+                    width = 12,
+                    plotlyOutput("monitoring_compare_heatmap", height = 420)
+                  )
+                )
               ),
-              tags$a(
-                href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
-                target = "_blank",
-                tags$img(src = "qr-code github.png", alt = "GitHub", 
-                         style = "height:100px; margin: 0 10px;")
+              fluidRow(
+                column(
+                  width = 12,
+                  box(
+                    title = "Initiatives in selected cell",
+                    status = "success",
+                    solidHeader = TRUE,
+                    width = 12,
+                    reactableOutput("monitoring_compare_table")
+                  )
+                )
+              )
+            ),
+            
+            # tabPanel(
+            #   "Map",
+            #   br(),
+            #   fluidRow(
+            #     column(
+            #       width = 12,
+            #       box(
+            #         title = "Geographical coverage",
+            #         status = "info",
+            #         solidHeader = TRUE,
+            #         width = 12,
+            #         leafletOutput("monitoring_map", height = 500)
+            #       )
+            #     )
+            #   ),
+            #   fluidRow(
+            #     column(
+            #       width = 12,
+            #       box(
+            #         title = "Selected geography",
+            #         status = "primary",
+            #         solidHeader = TRUE,
+            #         width = 12,
+            #         reactableOutput("monitoring_map_table")
+            #       )
+            #     )
+            #   )
+            # ),
+            
+            tabPanel(
+              "Map",
+              br(),
+              fluidRow(
+                column(
+                  width = 12,
+                  box(
+                    title = "Geographical coverage",
+                    status = "info",
+                    solidHeader = TRUE,
+                    width = 12,
+                    leafletOutput("monitoring_map", height = 540),
+                    uiOutput("monitoring_map_note")
+                  )
+                )
+              ),
+              fluidRow(
+                column(
+                  width = 12,
+                  box(
+                    title = "Selected geography",
+                    status = "primary",
+                    solidHeader = TRUE,
+                    width = 12,
+                    reactableOutput("monitoring_map_table")
+                  )
+                )
+              )
+            ),
+            
+            tabPanel(
+              "Directory",
+              br(),
+              fluidRow(
+                column(
+                  width = 12,
+                  box(
+                    title = "Monitoring initiatives directory",
+                    status = "info",
+                    solidHeader = TRUE,
+                    width = 12,
+                    reactableOutput("monitoring_directory_table")
+                  )
+                )
               )
             )
           )
         )
+      ),
+      
+      column(
+        width = 12, class = "col-lg-4 col-md-12 col-sm-12",
+        box(
+          title = tagList(icon("info-circle"), "Initiative details"),
+          status = "success",
+          solidHeader = TRUE,
+          width = 12,
+          htmlOutput("monitoring_details_panel")
+        )
+      )
+    ),
+    
+    fluidRow(
+      column(
+        width = 12,
+        tags$div(
+          class = "monitoring-footer",
+          
+          tags$div(
+            class = "monitoring-footer-left",
+            tags$a(
+              href = "https://anr.fr/Projet-ANR-24-RESO-0001",
+              target = "_blank",
+              tags$img(src = "logo_ANR_2022.jpg", alt = "ANR", style = "height:65px; margin: 0 10px;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "logo-transparent.png", alt = "OPENIT", style = "height:70px; margin: 0 10px;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/",
+              target = "_blank",
+              tags$img(src = "logo_GEMASS-couleur.png", alt = "gemass", style = "height:30px; margin: 0 10px;")
+            ),
+            tags$a(
+              href = "https://www.sorbonne-universite.fr/",
+              target = "_blank",
+              tags$img(src = "Logo_of_Sorbonne_University.svg.png", alt = "su", style = "height:30px; margin: 0 10px;")
+            ),
+            tags$a(
+              href = "https://www.cnrs.fr",
+              target = "_blank",
+              tags$img(src = "logo_cnrs.png", alt = "cnrs", style = "height:40px; margin: 0 10px;")
+            )
+          ),
+          
+          tags$div(
+            class = "monitoring-footer-right",
+            tags$a(
+              href = "https://amcm.shinyapps.io/openit/",
+              target = "_blank",
+              tags$img(src = "qr-code dashboard.png", alt = "Dashboard", style = "height:100px; margin: 0 10px;")
+            ),
+            tags$a(
+              href = "https://www.gemass.fr/contract/openit/",
+              target = "_blank",
+              tags$img(src = "qr-code openit.png", alt = "OpenIT", style = "height:100px; margin: 0 10px;")
+            ),
+            tags$a(
+              href = "https://github.com/abdelghani-maddi/osinit/blob/main/app.R",
+              target = "_blank",
+              tags$img(src = "qr-code github.png", alt = "GitHub", style = "height:100px; margin: 0 10px;")
+            )
+          )
+        )
+      )
+    )
+  )
 ),
 
 # --------------------------------------------------
@@ -2757,8 +4237,6 @@ server <- function(input, output, session) {
       session = session
     )
   })
-  
-  
   
   
   observeEvent(input$goto_by_category, {
@@ -3269,90 +4747,974 @@ server <- function(input, output, session) {
   # --------------------------------------------------
   # Monitoring Table: National/Global Monitoring Initiatives
   # --------------------------------------------------
-  output$monitoring_table <- DT::renderDataTable({
-    df <- monitoring_data()
-    
-    # Add stylized HTML link buttons to the 'Link' column
-    df$Link <- ifelse(
-      is.na(df$Link) | df$Link == "",
-      "",
-      paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
-    )
-    
-    # Replace 'Type' column with colored badges
-    df$Type <- create_colored_badge_column(df$Type)
-    
-    # Render datatable
-    DT::datatable(
-      df %>% select(Initiative, Type, Link, Description),
-      escape = FALSE,                      # Allow rendering of HTML in cells
-      rownames = FALSE,                    # Remove row indices
-      extensions = c('Buttons', 'Scroller'),
-      options = list(
-        pageLength = 10,                  # Show 10 rows per page
-        scrollX = TRUE,                   # Enable horizontal scrolling
-        dom = 'Bfrtip',                   # Show buttons (copy, CSV, Excel)
-        buttons = c('copy', 'csv', 'excel'),
-        columnDefs = list(
-          list(className = 'dt-left', targets = "_all"),
-          list(width = '25%', targets = 0),  # Initiative
-          list(width = '15%', targets = 1),  # Type
-          list(width = '10%', targets = 2),  # Link
-          list(width = '50%', targets = 3, className = 'wrap-text')  # Description
-        )
-      ),
-      class = 'display nowrap compact stripe'
-    )
-  })
+  # output$monitoring_table <- DT::renderDataTable({
+  #   df <- monitoring_data()
+  #   
+  #   # Add stylized HTML link buttons to the 'Link' column
+  #   df$Link <- ifelse(
+  #     is.na(df$Link) | df$Link == "",
+  #     "",
+  #     paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
+  #   )
+  #   
+  #   # Replace 'Type' column with colored badges
+  #   df$Type <- create_colored_badge_column(df$Type)
+  #   
+  #   # Render datatable
+  #   DT::datatable(
+  #     df %>% select(Initiative, Type, Link, Description),
+  #     escape = FALSE,                      # Allow rendering of HTML in cells
+  #     rownames = FALSE,                    # Remove row indices
+  #     extensions = c('Buttons', 'Scroller'),
+  #     options = list(
+  #       pageLength = 10,                  # Show 10 rows per page
+  #       scrollX = TRUE,                   # Enable horizontal scrolling
+  #       dom = 'Bfrtip',                   # Show buttons (copy, CSV, Excel)
+  #       buttons = c('copy', 'csv', 'excel'),
+  #       columnDefs = list(
+  #         list(className = 'dt-left', targets = "_all"),
+  #         list(width = '25%', targets = 0),  # Initiative
+  #         list(width = '15%', targets = 1),  # Type
+  #         list(width = '10%', targets = 2),  # Link
+  #         list(width = '50%', targets = 3, className = 'wrap-text')  # Description
+  #       )
+  #     ),
+  #     class = 'display nowrap compact stripe'
+  #   )
+  # })
+  # 
+  # # --------------------------------------------------
+  # # Focus Table: Initiatives by Country/Region
+  # # --------------------------------------------------
+  # output$focus_table <- DT::renderDataTable({
+  #   df <- df_focus()
+  #   
+  #   # Add country flag icons in the 'Country/Region' column
+  #   df$`Country/Region` <- ifelse(
+  #     is.na(df$Flag) | df$Flag == "",
+  #     df$`Country/Region`,
+  #     paste0("<img src='", df$Flag, "' width='24' style='margin-right:6px;'>", df$`Country/Region`)
+  #   )
+  #   
+  #   # Stylized HTML link buttons
+  #   df$Link <- ifelse(
+  #     is.na(df$Link) | df$Link == "",
+  #     "",
+  #     paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
+  #   )
+  #   
+  #   # Colored badge for type
+  #   df$Type <- create_colored_badge_column(df$Type)
+  #   
+  #   # Render datatable
+  #   DT::datatable(
+  #     df %>% select(Initiative, `Country/Region`, Group, Type, Description, Link),
+  #     escape = FALSE,
+  #     rownames = FALSE,
+  #     extensions = c('Buttons', 'Scroller'),
+  #     options = list(
+  #       pageLength = 10,
+  #       scrollX = TRUE,
+  #       dom = 'Bfrtip',
+  #       buttons = c('copy', 'csv', 'excel'),
+  #       columnDefs = list(
+  #         list(className = 'dt-left', targets = "_all"),
+  #         list(width = '15%', targets = 0),  # Initiative
+  #         list(width = '15%', targets = 1),  # Country/Region
+  #         list(width = '10%', targets = 2),  # Group
+  #         list(width = '15%', targets = 3),  # Type
+  #         list(width = '35%', targets = 4, className = 'wrap-text'),  # Description
+  #         list(width = '10%', targets = 5)   # Link
+  #       )
+  #     ),
+  #     class = 'display nowrap compact stripe'
+  #   )
+  # })
   
   # --------------------------------------------------
-  # Focus Table: Initiatives by Country/Region
+  # Monitoring server logic ----
   # --------------------------------------------------
-  output$focus_table <- DT::renderDataTable({
-    df <- df_focus()
+  
+    # ----------------------------
+    # Init filter choices ----
+    # ----------------------------
+    observe({
+      updatePickerInput(session, "monitoring_scope",
+                        choices = sort(unique(na.omit(monitoring_main$scope))))
+      
+      updatePickerInput(session, "monitoring_region",
+                        choices = sort(unique(na.omit(monitoring_main$region))))
+      
+      updatePickerInput(session, "monitoring_country",
+                        choices = sort(unique(na.omit(monitoring_main$country))))
+      
+      updatePickerInput(session, "monitoring_org_type",
+                        choices = sort(unique(na.omit(monitoring_main$lead_org_type))))
+      
+      updatePickerInput(session, "monitoring_status",
+                        choices = sort(unique(na.omit(monitoring_main$operational_status))))
+      
+      updatePickerInput(session, "monitoring_pillar",
+                        choices = sort(unique(na.omit(monitoring_pillars_long$pillar))))
+      
+      updatePickerInput(session, "monitoring_mechanism",
+                        choices = sort(unique(na.omit(monitoring_mechanisms_long$mechanism))))
+      
+      updatePickerInput(session, "monitoring_use",
+                        choices = sort(unique(na.omit(monitoring_uses_long$intended_use))))
+    })
     
-    # Add country flag icons in the 'Country/Region' column
-    df$`Country/Region` <- ifelse(
-      is.na(df$Flag) | df$Flag == "",
-      df$`Country/Region`,
-      paste0("<img src='", df$Flag, "' width='24' style='margin-right:6px;'>", df$`Country/Region`)
-    )
+    # ----------------------------
+    # Year UI ----
+    # ----------------------------
+    output$monitoring_year_ui <- renderUI({
+      yrs <- monitoring_main$start_year
+      yrs <- yrs[!is.na(yrs)]
+      
+      if (length(yrs) == 0) {
+        return(NULL)
+      }
+      
+      sliderInput(
+        "monitoring_year",
+        "Start year",
+        min = min(yrs),
+        max = max(yrs),
+        value = c(min(yrs), max(yrs)),
+        sep = ""
+      )
+    })
     
-    # Stylized HTML link buttons
-    df$Link <- ifelse(
-      is.na(df$Link) | df$Link == "",
-      "",
-      paste0("<a class='btn-visit' target='_blank' href='", df$Link, "'>🔗 Visit</a>")
-    )
+    # ----------------------------
+    # Reset filters ----
+    # ----------------------------
+    observeEvent(input$monitoring_reset, {
+      updateTextInput(session, "monitoring_search", value = "")
+      updatePickerInput(session, "monitoring_scope", selected = character(0))
+      updatePickerInput(session, "monitoring_region", selected = character(0))
+      updatePickerInput(session, "monitoring_country", selected = character(0))
+      updatePickerInput(session, "monitoring_org_type", selected = character(0))
+      updatePickerInput(session, "monitoring_status", selected = character(0))
+      updatePickerInput(session, "monitoring_pillar", selected = character(0))
+      updatePickerInput(session, "monitoring_mechanism", selected = character(0))
+      updatePickerInput(session, "monitoring_use", selected = character(0))
+      updateRadioButtons(session, "monitoring_compliance", selected = "All")
+      
+      yrs <- monitoring_main$start_year
+      yrs <- yrs[!is.na(yrs)]
+      if (length(yrs) > 0) {
+        updateSliderInput(session, "monitoring_year",
+                          value = c(min(yrs), max(yrs)))
+      }
+    })
     
-    # Colored badge for type
-    df$Type <- create_colored_badge_column(df$Type)
+    # ----------------------------
+    # Filtered data ----
+    # ----------------------------
+  # ----------------------------
+  # Filtered data ----
+  # ----------------------------
+  filtered_monitoring <- reactive({
+    df <- monitoring_main
     
-    # Render datatable
-    DT::datatable(
-      df %>% select(Initiative, `Country/Region`, Group, Type, Description, Link),
-      escape = FALSE,
-      rownames = FALSE,
-      extensions = c('Buttons', 'Scroller'),
-      options = list(
-        pageLength = 10,
-        scrollX = TRUE,
-        dom = 'Bfrtip',
-        buttons = c('copy', 'csv', 'excel'),
-        columnDefs = list(
-          list(className = 'dt-left', targets = "_all"),
-          list(width = '15%', targets = 0),  # Initiative
-          list(width = '15%', targets = 1),  # Country/Region
-          list(width = '10%', targets = 2),  # Group
-          list(width = '15%', targets = 3),  # Type
-          list(width = '35%', targets = 4, className = 'wrap-text'),  # Description
-          list(width = '10%', targets = 5)   # Link
+    if (!is.null(input$monitoring_search) && nzchar(input$monitoring_search)) {
+      pattern <- str_to_lower(input$monitoring_search)
+      df <- df %>% filter(str_detect(search_text, fixed(pattern)))
+    }
+    
+    if (!is.null(input$monitoring_scope) && length(input$monitoring_scope) > 0) {
+      df <- df %>% filter(scope %in% input$monitoring_scope)
+    }
+    
+    if (!is.null(input$monitoring_region) && length(input$monitoring_region) > 0) {
+      df <- df %>% filter(region %in% input$monitoring_region)
+    }
+    
+    if (!is.null(input$monitoring_country) && length(input$monitoring_country) > 0) {
+      df <- df %>% filter(country %in% input$monitoring_country)
+    }
+    
+    if (!is.null(input$monitoring_org_type) && length(input$monitoring_org_type) > 0) {
+      df <- df %>% filter(lead_org_type %in% input$monitoring_org_type)
+    }
+    
+    if (!is.null(input$monitoring_status) && length(input$monitoring_status) > 0) {
+      df <- df %>% filter(operational_status %in% input$monitoring_status)
+    }
+    
+    if (!is.null(input$monitoring_year) && length(input$monitoring_year) == 2) {
+      df <- df %>%
+        filter(
+          is.na(start_year) |
+            (start_year >= input$monitoring_year[1] &
+               start_year <= input$monitoring_year[2])
         )
-      ),
-      class = 'display nowrap compact stripe'
-    )
+    }
+    
+    if (!is.null(input$monitoring_compliance) &&
+        length(input$monitoring_compliance) == 1 &&
+        input$monitoring_compliance != "All") {
+      df <- df %>% filter(compliance_flag == input$monitoring_compliance)
+    }
+    
+    if (!is.null(input$monitoring_pillar) && length(input$monitoring_pillar) > 0) {
+      ids <- monitoring_pillars_long %>%
+        filter(pillar %in% input$monitoring_pillar) %>%
+        distinct(id)
+      df <- df %>% semi_join(ids, by = "id")
+    }
+    
+    if (!is.null(input$monitoring_mechanism) && length(input$monitoring_mechanism) > 0) {
+      ids <- monitoring_mechanisms_long %>%
+        filter(mechanism %in% input$monitoring_mechanism) %>%
+        distinct(id)
+      df <- df %>% semi_join(ids, by = "id")
+    }
+    
+    if (!is.null(input$monitoring_use) && length(input$monitoring_use) > 0) {
+      ids <- monitoring_uses_long %>%
+        filter(intended_use %in% input$monitoring_use) %>%
+        distinct(id)
+      df <- df %>% semi_join(ids, by = "id")
+    }
+    
+    df
   })
-}
+  
+  filtered_display <- reactive({
+    monitoring_display %>%
+      semi_join(filtered_monitoring(), by = "id")
+  })
+  
+  # ----------------------------
+  # Selected initiative ----
+  # ----------------------------
+  selected_monitoring_id <- reactiveVal(NULL)
+    
+  selected_monitoring <- reactive({
+    req(selected_monitoring_id())
+    dat <- filtered_display() %>%
+      filter(id == selected_monitoring_id())
+    
+    validate(
+      need(nrow(dat) > 0, "No initiative selected.")
+    )
+    
+    dat
+  })
+    
+  observe({
+    dat <- filtered_display()
+    
+    if (nrow(dat) == 0) {
+      selected_monitoring_id(NULL)
+      return()
+    }
+    
+    current_id <- selected_monitoring_id()
+    
+    if (is.null(current_id) || !(current_id %in% dat$id)) {
+      selected_monitoring_id(dat$id[1])
+    }
+  })
+    
+    # ----------------------------
+    # KPI helpers ----
+    # ----------------------------
+    top_pillar_text <- reactive({
+      ids <- filtered_monitoring()$id
+      top <- monitoring_pillars_long %>%
+        filter(id %in% ids) %>%
+        count(pillar, sort = TRUE)
+      
+      if (nrow(top) == 0) return("N/A")
+      top$pillar[1]
+    })
+    
+    dominant_scope_text <- reactive({
+      x <- filtered_monitoring() %>%
+        count(scope, sort = TRUE) %>%
+        filter(!is.na(scope), scope != "")
+      
+      if (nrow(x) == 0) return("N/A")
+      x$scope[1]
+    })
+    
+    # ----------------------------
+    # KPI outputs ----
+    # ----------------------------
+    output$monitoring_kpi_total <- renderValueBox({
+      valueBox(
+        value = nrow(filtered_monitoring()),
+        subtitle = "Initiatives displayed",
+        icon = icon("database"),
+        color = "light-blue"
+      )
+    })
+    
+    output$monitoring_kpi_countries <- renderValueBox({
+      valueBox(
+        value = filtered_monitoring() %>%
+          filter(!is.na(country), country != "") %>%
+          summarise(n = n_distinct(country)) %>%
+          pull(n),
+        subtitle = "Countries covered",
+        icon = icon("globe"),
+        color = "green"
+      )
+    })
+    
+    output$monitoring_kpi_scope <- renderValueBox({
+      valueBox(
+        value = dominant_scope_text(),
+        subtitle = "Dominant scope",
+        icon = icon("layer-group"),
+        color = "yellow"
+      )
+    })
+    
+    output$monitoring_kpi_compliance <- renderValueBox({
+      n_yes <- filtered_monitoring() %>%
+        filter(compliance_flag == "Yes") %>%
+        nrow()
+      
+      valueBox(
+        value = n_yes,
+        subtitle = "Compliance-linked initiatives",
+        icon = icon("scale-balanced"),
+        color = "red"
+      )
+    })
+    
+    output$monitoring_kpi_top_pillar <- renderValueBox({
+      
+      pillar <- top_pillar_text()
+      
+      pillar_short <- stringr::str_trunc(pillar, 60)
+      
+      valueBox(
+        value = pillar_short,
+        subtitle = "Top monitored pillar",
+        icon = icon("flask"),
+        color = "purple"
+      )
+      
+    })
+    
+    output$monitoring_kpi_years <- renderValueBox({
+      yrs <- filtered_monitoring()$start_year
+      yrs <- yrs[!is.na(yrs)]
+      
+      txt <- if (length(yrs) == 0) "N/A" else paste0(min(yrs), "–", max(yrs))
+      
+      valueBox(
+        value = txt,
+        subtitle = "Start year span",
+        icon = icon("calendar"),
+        color = "teal"
+      )
+    })
+    
+    # ----------------------------
+    # Overview plots ----
+    # ----------------------------
+    output$monitoring_plot_pillars <- renderPlotly({
+      ids <- filtered_monitoring()$id
+      
+      dat <- monitoring_pillars_long %>%
+        filter(id %in% ids) %>%
+        count(pillar, sort = TRUE) %>%
+        slice_head(n = 10)
+      
+      validate(
+        need(nrow(dat) > 0, "No data available for the current selection.")
+      )
+      
+      plot_ly(
+        dat,
+        x = ~n,
+        y = ~reorder(pillar, n),
+        type = "bar",
+        orientation = "h"
+      ) %>%
+        layout(
+          xaxis = list(title = ""),
+          yaxis = list(title = ""),
+          margin = list(l = 140)
+        )
+    })
+    
+    output$monitoring_plot_orgs <- renderPlotly({
+      dat <- filtered_monitoring() %>%
+        filter(!is.na(lead_org_type), lead_org_type != "") %>%
+        count(lead_org_type, sort = TRUE) %>%
+        slice_head(n = 10)
+      
+      validate(
+        need(nrow(dat) > 0, "No data available for the current selection.")
+      )
+      
+      plot_ly(
+        dat,
+        x = ~n,
+        y = ~reorder(lead_org_type, n),
+        type = "bar",
+        orientation = "h"
+      ) %>%
+        layout(
+          xaxis = list(title = ""),
+          yaxis = list(title = ""),
+          margin = list(l = 160)
+        )
+    })
+    
+    output$monitoring_plot_timeline <- renderPlotly({
+      dat <- filtered_monitoring() %>%
+        filter(!is.na(start_year)) %>%
+        count(start_year)
+      
+      validate(
+        need(nrow(dat) > 0, "No data available for the current selection.")
+      )
+      
+      plot_ly(
+        dat,
+        x = ~start_year,
+        y = ~n,
+        type = "bar"
+      ) %>%
+        layout(
+          xaxis = list(title = "Start year"),
+          yaxis = list(title = "Count")
+        )
+    })
+    
+    output$monitoring_plot_uses <- renderPlotly({
+      ids <- filtered_monitoring()$id
+      
+      dat <- monitoring_uses_long %>%
+        filter(id %in% ids) %>%
+        count(intended_use, sort = TRUE) %>%
+        slice_head(n = 10)
+      
+      validate(
+        need(nrow(dat) > 0, "No data available for the current selection.")
+      )
+      
+      plot_ly(
+        dat,
+        x = ~n,
+        y = ~reorder(intended_use, n),
+        type = "bar",
+        orientation = "h"
+      ) %>%
+        layout(
+          xaxis = list(title = ""),
+          yaxis = list(title = ""),
+          margin = list(l = 170)
+        )
+    })
+    
+    output$monitoring_summary_text <- renderUI({
+      df <- filtered_monitoring()
+      
+      n_init <- nrow(df)
+      top_scope <- dominant_scope_text()
+      top_pillar <- top_pillar_text()
+      
+      top_org <- df %>%
+        count(lead_org_type, sort = TRUE) %>%
+        filter(!is.na(lead_org_type), lead_org_type != "") %>%
+        slice_head(n = 1) %>%
+        pull(lead_org_type)
+      
+      n_yes <- df %>% filter(compliance_flag == "Yes") %>% nrow()
+      
+      tagList(
+        tags$p(
+          HTML(paste0(
+            "<b>", n_init, "</b> initiatives are currently displayed."
+          ))
+        ),
+        tags$p(
+          HTML(paste0(
+            "The dominant operational scope is <b>", top_scope,
+            "</b>, while the most frequently monitored pillar is <b>", top_pillar, "</b>."
+          ))
+        ),
+        tags$p(
+          HTML(paste0(
+            "The most common lead organisation type in the filtered subset is <b>",
+            ifelse(length(top_org) == 0, "N/A", top_org),
+            "</b>. Explicit links to compliance or enforcement appear in <b>",
+            n_yes, "</b> initiatives."
+          ))
+        )
+      )
+    })
+    
+    # ----------------------------
+    # Compare tab ----
+    # ----------------------------
+    compare_long_data <- reactive({
+      req(input$monitoring_compare_rows, input$monitoring_compare_cols)
+      
+      base <- filtered_monitoring()
+      
+      row_var <- input$monitoring_compare_rows
+      col_var <- input$monitoring_compare_cols
+      
+      row_df <- base %>%
+        select(id, row_value = all_of(row_var)) %>%
+        filter(!is.na(row_value), row_value != "")
+      
+      col_df <- switch(
+        col_var,
+        pillar = monitoring_pillars_long %>% rename(col_value = pillar),
+        mechanism = monitoring_mechanisms_long %>% rename(col_value = mechanism),
+        intended_use = monitoring_uses_long %>% rename(col_value = intended_use),
+        lead_org_type = monitoring_main %>% select(id, col_value = lead_org_type),
+        compliance_flag = monitoring_main %>% select(id, col_value = compliance_flag)
+      )
+      
+      row_df %>%
+        inner_join(col_df, by = "id") %>%
+        filter(!is.na(col_value), col_value != "")
+    })
+    
+    compare_matrix <- reactive({
+      compare_long_data() %>%
+        count(row_value, col_value, name = "n")
+    })
+    
+    output$monitoring_compare_heatmap <- renderPlotly({
+      dat <- compare_matrix()
+      
+      validate(
+        need(nrow(dat) > 0, "No data available for the current selection.")
+      )
+      
+      p <- plot_ly(
+        dat,
+        x = ~col_value,
+        y = ~row_value,
+        z = ~n,
+        type = "heatmap",
+        source = "monitoring_heatmap"
+      ) %>%
+        layout(
+          xaxis = list(title = ""),
+          yaxis = list(title = "")
+        )
+      
+      event_register(p, "plotly_click")
+      p
+    })
+    
+    selected_compare_cell <- reactiveVal(NULL)
+    
+    observeEvent(event_data("plotly_click", source = "monitoring_heatmap"), {
+      click <- event_data("plotly_click", source = "monitoring_heatmap")
+      req(click)
+      
+      selected_compare_cell(list(
+        row_value = click$y,
+        col_value = click$x
+      ))
+    })
+    
+    compare_selected_data <- reactive({
+      req(selected_compare_cell())
+      
+      compare_long_data() %>%
+        filter(
+          row_value == selected_compare_cell()$row_value,
+          col_value == selected_compare_cell()$col_value
+        ) %>%
+        distinct(id) %>%
+        left_join(filtered_display(), by = "id")
+    })
+    
+    output$monitoring_compare_table <- renderReactable({
+      dat <- compare_selected_data()
+      
+      reactable(
+        dat %>%
+          select(
+            id,
+            initiative_name,
+            scope,
+            region,
+            country,
+            lead_org_type,
+            start_year,
+            compliance_flag
+          ),
+        searchable = TRUE,
+        pagination = TRUE,
+        highlight = TRUE,
+        selection = "single",
+        onClick = "select",
+        columns = list(
+          id = colDef(show = FALSE),
+          initiative_name = colDef(name = "Initiative"),
+          lead_org_type = colDef(name = "Organisation type"),
+          start_year = colDef(name = "Year"),
+          compliance_flag = colDef(name = "Compliance")
+        )
+      )
+    })
+    
+    observeEvent(getReactableState("monitoring_compare_table", "selected"), {
+      idx <- getReactableState("monitoring_compare_table", "selected")
+      dat <- compare_selected_data()
+      if (!is.null(idx) && nrow(dat) >= idx) {
+        selected_monitoring_id(dat$id[idx])
+      }
+    })
+    
+    # ----------------------------
+    # Directory table ----
+    # ----------------------------
+    output$monitoring_directory_table <- renderReactable({
+      dat <- filtered_display() %>%
+        select(
+          id,
+          initiative_name,
+          scope,
+          region,
+          country,
+          lead_org_type,
+          start_year,
+          pillars,
+          compliance_flag,
+          operational_status
+        )
+      
+      reactable(
+        dat,
+        searchable = TRUE,
+        filterable = FALSE,
+        pagination = TRUE,
+        resizable = TRUE,
+        highlight = TRUE,
+        selection = "single",
+        defaultPageSize = 12,
+        onClick = "select",
+        columns = list(
+          id = colDef(show = FALSE),
+          initiative_name = colDef(name = "Initiative", minWidth = 220),
+          lead_org_type = colDef(name = "Organisation type"),
+          start_year = colDef(name = "Year"),
+          pillars = colDef(name = "Pillars", minWidth = 220),
+          compliance_flag = colDef(name = "Compliance"),
+          operational_status = colDef(name = "Status")
+        )
+      )
+    })
+    
+    observeEvent(getReactableState("monitoring_directory_table", "selected"), {
+      idx <- getReactableState("monitoring_directory_table", "selected")
+      dat <- filtered_display()
+      if (!is.null(idx) && nrow(dat) >= idx) {
+        selected_monitoring_id(dat$id[idx])
+      }
+    })
+    
+    # ----------------------------
+    # Map tab ----
+    # ----------------------------
+    # ----------------------------
+    # Map tab ----
+    # ----------------------------
+    
+    selected_country_map <- reactiveVal(NULL)
+    
+    monitoring_map_country_counts <- reactive({
+      filtered_display() %>%
+        filter(
+          !is.na(country_map),
+          country_map != "",
+          !country_map %in% c(
+            "Global", "International", "Europe",
+            "Multiple countries", "Cross-national",
+            "Continental / Cross-national"
+          )
+        ) %>%
+        group_by(country_map) %>%
+        summarise(
+          n_initiatives = n(),
+          initiatives = paste(sort(unique(initiative_name)), collapse = "<br/>"),
+          scopes = paste(sort(unique(na.omit(scope))), collapse = " | "),
+          .groups = "drop"
+        )
+    })
+    
+    monitoring_map_data <- reactive({
+      monitoring_map_country_counts() %>%
+        left_join(capitals, by = "country_map") %>%
+        filter(!is.na(lat), !is.na(lng))
+    })
+    
+    monitoring_map_polygons <- reactive({
+      world_sf %>%
+        left_join(monitoring_map_country_counts(), by = "country_map")
+    })
+    
+    output$monitoring_map <- renderLeaflet({
+      poly_dat <- monitoring_map_polygons()
+      point_dat <- monitoring_map_data()
+      
+      validate(
+        need(nrow(point_dat) > 0 || nrow(poly_dat) > 0, "No geographical data available for the current selection.")
+      )
+      
+      pal <- colorBin(
+        palette = "Blues",
+        domain = poly_dat$n_initiatives,
+        bins = c(0, 1, 2, 3, 5, 10, Inf),
+        na.color = "#F2F2F2"
+      )
+      
+      leaflet(options = leafletOptions(zoomControl = TRUE, minZoom = 1.5)) %>%
+        addProviderTiles("CartoDB.Positron") %>%
+        
+        addPolygons(
+          data = poly_dat,
+          fillColor = ~pal(n_initiatives),
+          fillOpacity = 0.75,
+          color = "#FFFFFF",
+          weight = 1,
+          smoothFactor = 0.2,
+          opacity = 1,
+          label = ~ifelse(
+            is.na(n_initiatives),
+            country_map,
+            paste0(country_map, ": ", n_initiatives, " initiative", ifelse(n_initiatives > 1, "s", ""))
+          ),
+          popup = ~ifelse(
+            is.na(n_initiatives),
+            paste0("<b>", country_map, "</b><br/>No initiative currently displayed."),
+            paste0(
+              "<b>", country_map, "</b><br/>",
+              "<b>Initiatives:</b> ", n_initiatives, "<br/>",
+              "<b>Scope(s):</b> ", scopes, "<br/><br/>",
+              initiatives
+            )
+          ),
+          highlightOptions = highlightOptions(
+            weight = 2,
+            color = "#444444",
+            bringToFront = TRUE
+          )
+        ) %>%
+        
+        addCircleMarkers(
+          data = point_dat,
+          lng = ~lng,
+          lat = ~lat,
+          radius = ~pmax(6, sqrt(n_initiatives) * 4),
+          stroke = TRUE,
+          weight = 1,
+          color = "#0B5ED7",
+          fillColor = "#17A2B8",
+          fillOpacity = 0.9,
+          popup = ~paste0(
+            "<b>", country_map, "</b><br/>",
+            "<b>Capital:</b> ", capital, "<br/>",
+            "<b>Initiatives:</b> ", n_initiatives, "<br/><br/>",
+            initiatives
+          ),
+          label = ~paste0(country_map, " (", n_initiatives, ")"),
+          layerId = ~country_map
+        ) %>%
+        
+        addLegend(
+          "bottomright",
+          pal = pal,
+          values = poly_dat$n_initiatives,
+          title = "Number of initiatives",
+          opacity = 0.8
+        ) %>%
+        
+        setView(lng = 10, lat = 25, zoom = 2)
+    })
+    
+    observeEvent(input$monitoring_map_marker_click, {
+      click <- input$monitoring_map_marker_click
+      req(click$id)
+      selected_country_map(click$id)
+    })
+    
+    map_selected_data <- reactive({
+      if (is.null(selected_country_map())) {
+        return(
+          filtered_display() %>%
+            select(
+              id,
+              initiative_name,
+              region,
+              country,
+              scope,
+              lead_org_type,
+              start_year,
+              compliance_flag
+            ) %>%
+            arrange(country, initiative_name)
+        )
+      }
+      
+      filtered_display() %>%
+        filter(country_map == selected_country_map()) %>%
+        select(
+          id,
+          initiative_name,
+          region,
+          country,
+          scope,
+          lead_org_type,
+          start_year,
+          compliance_flag
+        ) %>%
+        arrange(initiative_name)
+    })
+    
+    output$monitoring_map_table <- renderReactable({
+      dat <- map_selected_data()
+      
+      reactable(
+        dat,
+        searchable = TRUE,
+        pagination = TRUE,
+        highlight = TRUE,
+        selection = "single",
+        onClick = "select",
+        defaultPageSize = 8,
+        columns = list(
+          id = colDef(show = FALSE),
+          initiative_name = colDef(name = "Initiative", minWidth = 220),
+          lead_org_type = colDef(name = "Organisation type"),
+          start_year = colDef(name = "Year"),
+          compliance_flag = colDef(name = "Compliance")
+        )
+      )
+    })
+    
+    observeEvent(getReactableState("monitoring_map_table", "selected"), {
+      idx <- getReactableState("monitoring_map_table", "selected")
+      dat <- map_selected_data()
+      
+      if (!is.null(idx) && length(idx) == 1 && nrow(dat) >= idx) {
+        selected_monitoring_id(dat$id[idx])
+      }
+    }, ignoreNULL = TRUE)
+    
+    output$monitoring_map_note <- renderUI({
+      non_mapped <- filtered_display() %>%
+        filter(
+          is.na(country_map) |
+            country_map == "" |
+            country_map %in% c(
+              "Global", "International", "Europe",
+              "Multiple countries", "Cross-national",
+              "Continental / Cross-national"
+            )
+        ) %>%
+        nrow()
+      
+      if (non_mapped == 0) return(NULL)
+      
+      tags$p(
+        style = "margin-top:8px; color:#666; font-size:13px;",
+        paste(
+          non_mapped,
+          "initiative(s) have non-country-specific or unmatched coverage and are not shown on the map."
+        )
+      )
+    })
+    
+    
+    # ----------------------------
+    # Details panel ----
+    # ----------------------------
+    output$monitoring_details_panel <- renderUI({
+      dat <- selected_monitoring()
+      
+      if (nrow(dat) == 0) {
+        return(tags$p("Select an initiative from the directory, compare view or map."))
+      }
+      
+      x <- dat[1, ]
+      
+      tagList(
+        tags$h4(x$initiative_name),
+        tags$p(HTML(paste0("<b>Scope:</b> ", x$scope %||% "N/A"))),
+        tags$p(HTML(paste0("<b>Region:</b> ", x$region %||% "N/A"))),
+        tags$p(HTML(paste0("<b>Country:</b> ", x$country %||% "N/A"))),
+        tags$p(HTML(paste0("<b>Start year:</b> ", x$start_year %||% "N/A"))),
+        tags$p(HTML(paste0("<b>Status:</b> ", x$operational_status %||% "N/A"))),
+        tags$hr(),
+        
+        tags$p(tags$b("Description")),
+        tags$p(x$description %||% "No description available."),
+        
+        tags$p(HTML(paste0("<b>Lead organisation:</b> ", x$lead_org_name %||% "N/A"))),
+        tags$p(HTML(paste0("<b>Organisation type:</b> ", x$lead_org_type %||% "N/A"))),
+        
+        tags$p(tags$b("Pillars monitored")),
+        tags$p(x$pillars %||% "N/A"),
+        
+        tags$p(tags$b("Monitoring mechanism")),
+        tags$p(x$mechanisms %||% "N/A"),
+        
+        tags$p(tags$b("Intended uses")),
+        tags$p(x$intended_uses %||% "N/A"),
+        
+        tags$p(HTML(paste0("<b>Compliance / enforcement:</b> ", x$compliance_flag %||% "Unclear"))),
+        
+        if (!is.na(x$initiative_url) && x$initiative_url != "") {
+          tags$p(
+            tags$a(
+              href = x$initiative_url,
+              target = "_blank",
+              "Open initiative website"
+            )
+          )
+        },
+        
+        if (!is.na(x$contact_link) && x$contact_link != "") {
+          tags$p(
+            tags$a(
+              href = x$contact_link,
+              target = "_blank",
+              "Contact information"
+            )
+          )
+        },
+        
+        if (!is.na(x$notes) && x$notes != "") {
+          tagList(
+            tags$hr(),
+            tags$p(tags$b("Notes")),
+            tags$p(x$notes)
+          )
+        }
+      )
+    })
+    
+    # ----------------------------
+    # Download filtered data ----
+    # ----------------------------
+    output$monitoring_download <- downloadHandler(
+      filename = function() {
+        paste0("monitoring_landscape_filtered_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        readr::write_csv(filtered_display(), file)
+      }
+    )
+  }
+
 
 
 # Launch the application
