@@ -1,5 +1,5 @@
 # ============================================================
-# COSMI Hub V7 — Community Open Science Mapping Initiatives Hub
+# COSMI Hub V10 — Community Open Science Mapping Initiatives Hub
 # ============================================================
 #
 # Purpose
@@ -49,7 +49,7 @@
 # Dependencies are declared in one place. The app stops early with a clear message if one is missing.
 packages <- c(
   "shiny", "bslib", "dplyr", "tidyr", "stringr", "ggplot2",
-  "plotly", "DT", "leaflet", "googlesheets4", "readxl", "scales", "forcats", "readr", "purrr"
+  "plotly", "DT", "leaflet", "googlesheets4", "readxl", "scales", "forcats", "readr", "purrr", "digest"
 )
 
 missing_packages <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
@@ -78,6 +78,7 @@ library(scales)
 library(forcats)
 library(readr)
 library(purrr)
+library(digest)
 
 # ---- 01b. Global options ----
 # Raise the Shiny upload limit for potential local datasets.
@@ -331,13 +332,19 @@ read_table_safe <- function(sheet) {
     if (is.na(path)) {
       stop("Local data file not found. Tried: ", paste(candidate_local_paths, collapse = ", "))
     }
-    readxl::read_excel(path, sheet = sheet, guess_max = 5000)
+    out <- readxl::read_excel(path, sheet = sheet, guess_max = 5000)
+    attr(out, "cosmi_source") <- paste0("Local workbook: ", basename(path))
+    out
   }
 
   out <- if (isTRUE(use_google_sheets)) {
     googlesheets4::gs4_deauth()
     tryCatch(
-      googlesheets4::read_sheet(sheet_url, sheet = sheet),
+      {
+        x <- googlesheets4::read_sheet(sheet_url, sheet = sheet)
+        attr(x, "cosmi_source") <- "Google Sheets"
+        x
+      },
       error = function(e) {
         message("Google Sheets read failed; falling back to local workbook. Details: ", conditionMessage(e))
         read_local()
@@ -346,7 +353,9 @@ read_table_safe <- function(sheet) {
   } else {
     read_local()
   }
-  clean_names_local(out)
+  out <- clean_names_local(out)
+  attr(out, "cosmi_source") <- attr(out, "cosmi_source") %||% ifelse(isTRUE(use_google_sheets), "Google Sheets", "Local workbook")
+  out
 }
 
 
@@ -473,57 +482,94 @@ build_validation_queue <- function(master_df) {
 }
 
 # ---- 03c. Column harmonisation ----
-master <- master_raw |>
-  mutate(
-    initiative_id = normalise_empty(first_existing(cur_data_all(), c("initiative_id", "id"))),
-    name = normalise_empty(first_existing(cur_data_all(), c("name", "name_2", "name_17", "orgname", "org_name", "organization_name", "initiative_name"))),
-    short_name = normalise_empty(first_existing(cur_data_all(), c("short_name", "abbreviated_orgname", "abbreviated_org_name")), ""),
-    category = normalise_empty(first_existing(cur_data_all(), c("original_category", "category"))),
-    initiative_type = normalise_empty(first_existing(cur_data_all(), c("object_type_openit_v3", "object_type_openit", "object_type", "initiative_type"))),
-    lead_actor_type = normalise_empty(first_existing(cur_data_all(), c("lead_actor_type_openit_v3", "lead_actor_type_openit", "lead_actor_type"))),
-    governance_type = normalise_empty(first_existing(cur_data_all(), c("governance_type_openit_v3", "governance_type_openit", "governance_type"))),
-    scope = normalise_empty(first_existing(cur_data_all(), c("scope_openit_v3", "scope_openit", "scope"))),
-    country = normalise_empty(first_existing(cur_data_all(), c("country"))),
-    region = normalise_empty(first_existing(cur_data_all(), c("region", "continent"))),
-    website = normalise_empty(first_existing(cur_data_all(), c("website", "org_website", "orgwebsite")), ""),
-    latitude = suppressWarnings(as.numeric(first_existing(cur_data_all(), c("latitude", "lat"), NA))),
-    longitude = suppressWarnings(as.numeric(first_existing(cur_data_all(), c("longitude", "lon", "lng"), NA))),
-    data_quality = normalise_empty(first_existing(cur_data_all(), c("data_quality", "coding_status"), "To validate"))
+prepare_data_bundle <- function(master_raw_input) {
+  source_label <- attr(master_raw_input, "cosmi_source") %||% ifelse(isTRUE(use_google_sheets), "Google Sheets", "Local workbook")
+
+  master <- master_raw_input |>
+    mutate(
+      initiative_id = normalise_empty(first_existing(cur_data_all(), c("initiative_id", "id"))),
+      name = normalise_empty(first_existing(cur_data_all(), c("name", "name_2", "name_17", "orgname", "org_name", "organization_name", "initiative_name"))),
+      short_name = normalise_empty(first_existing(cur_data_all(), c("short_name", "abbreviated_orgname", "abbreviated_org_name")), ""),
+      category = normalise_empty(first_existing(cur_data_all(), c("original_category", "category"))),
+      initiative_type = normalise_empty(first_existing(cur_data_all(), c("object_type_openit_v3", "object_type_openit", "object_type", "initiative_type"))),
+      lead_actor_type = normalise_empty(first_existing(cur_data_all(), c("lead_actor_type_openit_v3", "lead_actor_type_openit", "lead_actor_type"))),
+      governance_type = normalise_empty(first_existing(cur_data_all(), c("governance_type_openit_v3", "governance_type_openit", "governance_type"))),
+      scope = normalise_empty(first_existing(cur_data_all(), c("scope_openit_v3", "scope_openit", "scope"))),
+      country = normalise_empty(first_existing(cur_data_all(), c("country"))),
+      region = normalise_empty(first_existing(cur_data_all(), c("region", "continent"))),
+      website = normalise_empty(first_existing(cur_data_all(), c("website", "org_website", "orgwebsite")), ""),
+      latitude = suppressWarnings(as.numeric(first_existing(cur_data_all(), c("latitude", "lat"), NA))),
+      longitude = suppressWarnings(as.numeric(first_existing(cur_data_all(), c("longitude", "lon", "lng"), NA))),
+      data_quality = normalise_empty(first_existing(cur_data_all(), c("data_quality", "coding_status"), "To validate"))
+    )
+
+  master_full <- master |>
+    mutate(
+      initiative_type_raw = initiative_type,
+      lead_actor_type_raw = lead_actor_type,
+      governance_type_raw = governance_type,
+      scope_raw = scope,
+      object_type = clean_object_type(initiative_type_raw),
+      initiative_type = clean_unesco_category(category),
+      lead_actor_type = clean_actor(lead_actor_type_raw),
+      governance_family = clean_governance_family(governance_type_raw),
+      governance_type = governance_family,
+      scope = clean_scope(scope_raw),
+      role_in_ecosystem = clean_object_type(first_existing(cur_data_all(), c("role_in_ecosystem", "economic_role", "role", "object_type_openit"))),
+      funding_model_raw = normalise_empty(first_existing(cur_data_all(), c("funding_model"))),
+      funding_model = clean_funding_model(funding_model_raw),
+      funding_source = normalise_empty(first_existing(cur_data_all(), c("funding_source", "funding_source_hint", "source"))),
+      economic_logic_raw = normalise_empty(first_existing(cur_data_all(), c("economic_logic"))),
+      economic_logic = clean_economic_logic(economic_logic_raw),
+      non_profit = clean_yes_no_level(first_existing(cur_data_all(), c("non_profit", "nonprofit"))),
+      community_led = clean_yes_no_level(first_existing(cur_data_all(), c("community_led", "community_governance"))),
+      open_source_tools = clean_yes_no_level(first_existing(cur_data_all(), c("open_source_tools", "open_source", "opensource"))),
+      multilingual = clean_yes_no_level(first_existing(cur_data_all(), c("multilingual"))),
+      global_south_presence = clean_yes_no_level(first_existing(cur_data_all(), c("global_south_presence", "global_south_inclusion"))),
+      source_url = normalise_empty(first_existing(cur_data_all(), c("source", "source_url", "economic_source_url", "website")), "")
+    ) |>
+    filter(!is.na(initiative_type), initiative_type != "Unknown")
+
+  dims_long <- build_open_science_dimensions(master_full) |>
+    mutate(dimension = factor(dimension, levels = unesco_categories))
+
+  list(
+    master_full = master_full,
+    dims_long = dims_long,
+    diversity = build_diversity_profile(master_full),
+    valid = build_validation_queue(master_full),
+    loaded_at = Sys.time(),
+    source = source_label,
+    error = NULL
   )
+}
 
-master_full <- master |>
-  mutate(
-    initiative_type_raw = initiative_type,
-    lead_actor_type_raw = lead_actor_type,
-    governance_type_raw = governance_type,
-    scope_raw = scope,
-    object_type = clean_object_type(initiative_type_raw),
-    initiative_type = clean_unesco_category(category),
-    lead_actor_type = clean_actor(lead_actor_type_raw),
-    governance_family = clean_governance_family(governance_type_raw),
-    governance_type = governance_family,
-    scope = clean_scope(scope_raw),
-    role_in_ecosystem = clean_object_type(first_existing(cur_data_all(), c("role_in_ecosystem", "economic_role", "role", "object_type_openit"))),
-    funding_model_raw = normalise_empty(first_existing(cur_data_all(), c("funding_model"))),
-    funding_model = clean_funding_model(funding_model_raw),
-    funding_source = normalise_empty(first_existing(cur_data_all(), c("funding_source", "funding_source_hint", "source"))),
-    economic_logic_raw = normalise_empty(first_existing(cur_data_all(), c("economic_logic"))),
-    economic_logic = clean_economic_logic(economic_logic_raw),
-    non_profit = clean_yes_no_level(first_existing(cur_data_all(), c("non_profit", "nonprofit"))),
-    community_led = clean_yes_no_level(first_existing(cur_data_all(), c("community_led", "community_governance"))),
-    open_source_tools = clean_yes_no_level(first_existing(cur_data_all(), c("open_source_tools", "open_source", "opensource"))),
-    multilingual = clean_yes_no_level(first_existing(cur_data_all(), c("multilingual"))),
-    global_south_presence = clean_yes_no_level(first_existing(cur_data_all(), c("global_south_presence", "global_south_inclusion"))),
-    source_url = normalise_empty(first_existing(cur_data_all(), c("source", "source_url", "economic_source_url", "website")), "")
-  ) |>
-  filter(!is.na(initiative_type), initiative_type != "Unknown")
+initial_bundle <- prepare_data_bundle(master_raw)
+master_full <- initial_bundle$master_full
+dims_long <- initial_bundle$dims_long
+diversity <- initial_bundle$diversity
+valid <- initial_bundle$valid
 
-dims_long <- build_open_science_dimensions(master_full) |>
-  mutate(dimension = factor(dimension, levels = unesco_categories))
 
-diversity <- build_diversity_profile(master_full)
-valid <- build_validation_queue(master_full)
-
+linkify_website <- function(df) {
+  if (!"website" %in% names(df)) return(df)
+  df |>
+    dplyr::mutate(
+      website = dplyr::case_when(
+        is.na(.data$website) | stringr::str_squish(as.character(.data$website)) == "" ~ "",
+        stringr::str_detect(as.character(.data$website), "^https?://") ~ paste0(
+          '<a href="', htmltools::htmlEscape(as.character(.data$website)),
+          '" target="_blank" rel="noopener noreferrer">',
+          htmltools::htmlEscape(as.character(.data$website)), '</a>'
+        ),
+        TRUE ~ paste0(
+          '<a href="https://', htmltools::htmlEscape(as.character(.data$website)),
+          '" target="_blank" rel="noopener noreferrer">',
+          htmltools::htmlEscape(as.character(.data$website)), '</a>'
+        )
+      )
+    )
+}
 # ---- 04. Visual palette ----
 # Centralised colours for plots and cards.
 cosmi_palette <- c(
@@ -589,7 +635,7 @@ faq_doc_url <- "https://docs.google.com/document/d/1F0CrXoXABLvmHDQO3ChrjtR_u9g7
 method_doc_url <- "https://docs.google.com/document/d/14G8cpONSY4E3XoEq3hpSvflndpH0-qLU47P-rmA7UFo/preview"
 add_initiative_form_url <- "https://docs.google.com/forms/d/1gcIosEnk4qOR9BS4lFitiwj-onLNrSpVybyqSIQ_3Kc/viewform?embedded=true"
 report_error_form_url <- "https://docs.google.com/forms/d/1iDJp9iMNSfG2ur47i6122QphXxssL34-my_m2vDusoI/viewform?embedded=true"
-source_code_url <- "https://github.com/abdelghani-maddi/osinit/blob/main/app.R"
+source_code_url <- "https://github.com/"
 
 # External project and institutional links used by clickable logos.
 openit_project_url <- "https://www.gemass.fr/contract/openit/"
@@ -1131,6 +1177,74 @@ ui <- page_navbar(
         font-weight: 750;
       }
 
+
+      .navbar-data-tools {
+        margin-left: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: rgba(255,255,255,0.88);
+        font-size: 0.78rem;
+        white-space: nowrap;
+      }
+
+      .navbar-data-tools .btn {
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.32);
+        color: white;
+        background: rgba(255,255,255,0.08);
+        font-weight: 800;
+        padding: 7px 12px;
+        box-shadow: none;
+      }
+
+      .navbar-data-tools .btn:hover {
+        background: rgba(255,255,255,0.16);
+        color: white;
+      }
+
+      .navbar-data-tools .btn:active {
+        transform: translateY(1px);
+      }
+
+      .data-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        display: inline-block;
+        background: #38D39F;
+        box-shadow: 0 0 0 3px rgba(56,211,159,0.14);
+      }
+
+      .data-status-dot.warn {
+        background: #FFB84D;
+        box-shadow: 0 0 0 3px rgba(255,184,77,0.15);
+      }
+
+      .data-status-main {
+        font-weight: 800;
+      }
+
+      .data-status-sub {
+        opacity: 0.72;
+        font-size: 0.72rem;
+      }
+
+      .data-status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.10);
+        color: rgba(255,255,255,0.92);
+        border: 1px solid rgba(255,255,255,0.18);
+      }
+
+      @media (max-width: 1180px) {
+        .navbar-data-tools .data-status-chip { display: none; }
+      }
+
       @media (max-width: 1100px) {
         .section-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1189,6 +1303,7 @@ ui <- page_navbar(
         }
         .navbar-collapse { padding-bottom: 14px; flex-grow: 1; }
         .navbar-nav .nav-link { padding: 10px 0 !important; margin: 0; border-bottom-width: 0; }
+        .navbar-data-tools { margin-left: 0; width: 100%; justify-content: flex-start; padding: 8px 0; }
         .page-wrap { padding: 22px 16px 42px 16px; }
         .hero { border-radius: 22px; padding: 28px 24px; }
         .filter-card { position: relative; top: auto; }
@@ -1486,7 +1601,7 @@ ui <- page_navbar(
         external_link_card("Suggest an initiative", "Submit a missing Open Science initiative to enrich the directory.", add_initiative_form_url, "Open form"),
         external_link_card("Report an error", "Flag a correction or missing information for an existing record.", report_error_form_url, "Open form"),
         div(class = "action-card", h3("Download dataset"), p("Download the harmonised master table currently used by the dashboard."), downloadButton("download_dataset_csv", "Download CSV", class = "btn-primary")),
-        external_link_card("Source code", "Access the application repository", source_code_url, "Open GitHub")
+        external_link_card("Source code", "Access the application repository or replace this URL with your GitHub repository.", source_code_url, "Open GitHub")
       ),
 
       uiOutput("data_quality_strip"),
@@ -1526,29 +1641,36 @@ ui <- page_navbar(
       navset_tab(
         nav_panel(
           "About the project",
-          embed_card("About this project", about_doc_url, height = "820px", note = "Overview of the COSMI Hub and its development within the OPENIT project.")
+          embed_card("About this project", about_doc_url, height = "820px", note = "This section presents the objectives, scope and institutional context of the COSMI Hub, developed as part of the OPENIT project.")
         ),
         nav_panel(
           "FAQs",
-          embed_card("Frequently asked questions", faq_doc_url, height = "820px", note = "Frequently asked questions about the project and dataset.")
+          embed_card("Frequently asked questions", faq_doc_url, height = "820px", note = "This section provides answers to frequently asked questions about the data, methodology and scope of the COSMI Hub.")
         ),
         nav_panel(
           "Methodological background",
-          embed_card("Methodological background", method_doc_url, height = "820px", note = "Documentation of data collection and coding procedures.")
+          embed_card("Methodological background", method_doc_url, height = "820px", note = "This section documents the data collection process, coding framework and analytical choices underlying the COSMI Hub.")
         )
       ),
 
       div(
         class = "cosmi-card project-partners-card",
         card_body(
-          h2("Support and funding"),
-          p(class = "small-note", "The COSMI Hub is developed within GEMASS research unit (Sorbonne University and CNRS), with funding from the French National Research Agency (ANR) as part of the OPENIT project. Click a logo to open the corresponding project or institutional website."),
+          h2("Project support"),
+          p(class = "small-note", "Funded by ANR and developed at Sorbonne University and CNRS within the OPENIT project."),
           project_logo_strip(compact = FALSE)
         )
       )
     )
   ),
   nav_spacer(),
+  nav_item(
+    div(
+      class = "navbar-data-tools",
+      actionButton("refresh_data", "Refresh", class = "btn-sm", icon = icon("rotate")),
+      uiOutput("data_status_nav", inline = TRUE)
+    )
+  ),
   nav_item(
     tags$a(
       href = openit_project_url, target = "_blank", rel = "noopener",
@@ -1560,6 +1682,81 @@ ui <- page_navbar(
 # ---- 06. Server ----
 # Shared renderers first, followed by one block per app section.
 server <- function(input, output, session) {
+
+  # ---- Data refresh state ----
+  data_bundle <- reactiveVal(initial_bundle)
+  data_hash <- reactiveVal(digest::digest(initial_bundle$master_full))
+  refresh_state <- reactiveVal("ready")
+  makeActiveBinding("master_full", function() data_bundle()$master_full, environment())
+  makeActiveBinding("dims_long", function() data_bundle()$dims_long, environment())
+  makeActiveBinding("diversity", function() data_bundle()$diversity, environment())
+  makeActiveBinding("valid", function() data_bundle()$valid, environment())
+
+
+  refresh_data_from_source <- function(show_feedback = TRUE) {
+    refresh_state("loading")
+    if (isTRUE(show_feedback)) {
+      showNotification("Refreshing COSMI Hub data…", type = "message", duration = 2)
+    }
+
+    tryCatch({
+      raw <- read_table_safe("initiatives_master")
+      new_bundle <- prepare_data_bundle(raw)
+      new_hash <- digest::digest(new_bundle$master_full)
+      previous_hash <- data_hash()
+
+      if (identical(new_hash, previous_hash)) {
+        old_bundle <- data_bundle()
+        old_bundle$loaded_at <- Sys.time()
+        old_bundle$error <- NULL
+        data_bundle(old_bundle)
+        refresh_state("unchanged")
+        if (isTRUE(show_feedback)) {
+          showNotification("No data changes detected. The displayed dataset is up to date.", type = "default", duration = 4)
+        }
+      } else {
+        data_bundle(new_bundle)
+        data_hash(new_hash)
+        refresh_state("updated")
+        if (isTRUE(show_feedback)) {
+          showNotification(
+            paste0("Data updated from ", new_bundle$source, " — ", nrow(new_bundle$master_full), " initiatives loaded."),
+            type = "message", duration = 5
+          )
+        }
+      }
+    }, error = function(e) {
+      old_bundle <- data_bundle()
+      old_bundle$error <- conditionMessage(e)
+      data_bundle(old_bundle)
+      refresh_state("error")
+      showNotification(
+        paste0("Data refresh failed. The previous dataset is still displayed. ", conditionMessage(e)),
+        type = "error", duration = 8
+      )
+    })
+  }
+
+  observeEvent(input$refresh_data, {
+    refresh_data_from_source(show_feedback = TRUE)
+  }, ignoreInit = TRUE)
+
+  output$data_status_nav <- renderUI({
+    b <- data_bundle()
+    state <- refresh_state()
+    has_error <- !is.null(b$error)
+    time_label <- if (is.null(b$loaded_at)) "loaded" else format(b$loaded_at, "%H:%M")
+    main_label <- if (has_error) "Refresh failed" else if (identical(state, "unchanged")) "Up to date" else "Data live"
+    dot_class <- if (has_error) "data-status-dot warn" else "data-status-dot"
+
+    span(
+      class = "data-status-chip",
+      title = paste0("Source: ", b$source %||% "Unknown", if (has_error) paste0(" | Last error: ", b$error) else ""),
+      span(class = dot_class),
+      span(class = "data-status-main", main_label),
+      span(class = "data-status-sub", paste0("· ", time_label))
+    )
+  })
 
   # ---- Shared KPI ----
   render_kpi <- function(value, label, note = NULL) {
@@ -1788,8 +1985,9 @@ server <- function(input, output, session) {
       select(name, initiative_type, governance_type, lead_actor_type, region, website)
 
     datatable(
-      df,
+      linkify_website(df),
       rownames = FALSE,
+      escape = FALSE,
       colnames = c("Initiative", "Type", "Governance", "Lead actor", "Region", "Website"),
       caption = htmltools::tags$caption(
         style = "caption-side: top; text-align: left; font-weight: 800; padding: 10px 0; color: #12395B;",
@@ -1853,8 +2051,9 @@ server <- function(input, output, session) {
     }
 
     datatable(
-      df,
+      linkify_website(df),
       rownames = FALSE,
+      escape = FALSE,
       caption = htmltools::tags$caption(
         style = "caption-side: top; text-align: left; font-weight: 700; padding-bottom: 8px;",
         caption_txt
@@ -2375,8 +2574,9 @@ server <- function(input, output, session) {
     }
 
     datatable(
-      df,
+      linkify_website(df),
       rownames = FALSE,
+      escape = FALSE,
       caption = htmltools::tags$caption(
         style = "caption-side: top; text-align: left; font-weight: 700; padding-bottom: 8px;",
         caption_txt
@@ -2397,8 +2597,10 @@ server <- function(input, output, session) {
   output$typology_table <- renderDT({
     master_full |>
       select(initiative_id, name, short_name, category, initiative_type, lead_actor_type, governance_type, scope, country, region, website) |>
+      linkify_website() |>
       datatable(
         rownames = FALSE,
+        escape = FALSE,
         filter = "top",
         extensions = c("Buttons", "Scroller"),
         options = list(
@@ -2700,8 +2902,9 @@ server <- function(input, output, session) {
     validate(need(nrow(df) > 0, "No initiatives for current dimension selection."))
 
     datatable(
-      df,
+      linkify_website(df),
       rownames = FALSE,
+      escape = FALSE,
       caption = htmltools::tags$caption(
         style = "caption-side: top; text-align: left; font-weight: 700; padding-bottom: 8px;",
         caption_txt
@@ -2903,8 +3106,9 @@ server <- function(input, output, session) {
     validate(need(nrow(df) > 0, "No economic records for current selection."))
 
     datatable(
-      df,
+      linkify_website(df),
       rownames = FALSE,
+      escape = FALSE,
       filter = "top",
       extensions = c("Buttons", "Scroller"),
       options = list(
@@ -3229,8 +3433,9 @@ server <- function(input, output, session) {
     validate(need(nrow(df) > 0, "No governance records for current selection."))
 
     datatable(
-      df,
+      linkify_website(df),
       rownames = FALSE,
+      escape = FALSE,
       filter = "top",
       extensions = c("Buttons", "Scroller"),
       options = list(
@@ -3284,6 +3489,7 @@ server <- function(input, output, session) {
       select(initiative_id, name, field, current_value, validation_priority, initiative_type, country, region, notes) |>
       datatable(
         rownames = FALSE,
+        escape = FALSE,
         filter = "top",
         options = cosmi_dt_options(page_length = 12, dom = "Bfrtip")
       )
@@ -3291,5 +3497,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
-# rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
