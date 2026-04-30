@@ -635,7 +635,7 @@ faq_doc_url <- "https://docs.google.com/document/d/1F0CrXoXABLvmHDQO3ChrjtR_u9g7
 method_doc_url <- "https://docs.google.com/document/d/14G8cpONSY4E3XoEq3hpSvflndpH0-qLU47P-rmA7UFo/preview"
 add_initiative_form_url <- "https://docs.google.com/forms/d/1gcIosEnk4qOR9BS4lFitiwj-onLNrSpVybyqSIQ_3Kc/viewform?embedded=true"
 report_error_form_url <- "https://docs.google.com/forms/d/1iDJp9iMNSfG2ur47i6122QphXxssL34-my_m2vDusoI/viewform?embedded=true"
-source_code_url <- "https://github.com/"
+source_code_url <- "https://github.com/abdelghani-maddi/osinit/blob/main/app.R"
 
 # External project and institutional links used by clickable logos.
 openit_project_url <- "https://www.gemass.fr/contract/openit/"
@@ -1601,7 +1601,7 @@ ui <- page_navbar(
         external_link_card("Suggest an initiative", "Submit a missing Open Science initiative to enrich the directory.", add_initiative_form_url, "Open form"),
         external_link_card("Report an error", "Flag a correction or missing information for an existing record.", report_error_form_url, "Open form"),
         div(class = "action-card", h3("Download dataset"), p("Download the harmonised master table currently used by the dashboard."), downloadButton("download_dataset_csv", "Download CSV", class = "btn-primary")),
-        external_link_card("Source code", "Access the application repository or replace this URL with your GitHub repository.", source_code_url, "Open GitHub")
+        external_link_card("Source code", "Access the application source code on GitHub.", source_code_url, "View source")
       ),
 
       uiOutput("data_quality_strip"),
@@ -1614,15 +1614,6 @@ ui <- page_navbar(
         nav_panel(
           "Report an error",
           embed_card("Report an error or correction", report_error_form_url, height = "900px", note = "Use this form to suggest corrections, missing values or updates for an existing initiative.")
-        ),
-        nav_panel(
-          "Validation queue",
-          layout_columns(
-            col_widths = c(12, 12),
-            plot_card("Validation priority", plotlyOutput("validation_priority_plot", height = 390)),
-            plot_card("Fields to check", plotlyOutput("validation_field_plot", height = 390))
-          ),
-          plot_card("Validation queue", DTOutput("validation_table"))
         )
       )
     )
@@ -3497,5 +3488,6 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
 
 # rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
