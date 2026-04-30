@@ -3497,3 +3497,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
+# rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
