@@ -1,5 +1,5 @@
 # ============================================================
-# COSMI Hub V10 — Community Open Science Mapping Initiatives Hub
+# COSMI Hub V15 — Community Open Science Mapping Initiatives Hub
 # ============================================================
 #
 # Purpose
@@ -222,18 +222,24 @@ clean_governance_family <- function(x) {
 }
 
 clean_funding_model <- function(x) {
-  x <- clean_text(x)
+  # Funding modalities are now controlled in the master table.
+  # Keep underscores so categories such as author_pays remain stable.
+  x <- stringr::str_to_lower(as.character(x))
+  x <- stringr::str_squish(x)
+
   dplyr::case_when(
-    stringr::str_detect(x, "apc|article processing") ~ "APC / author fees",
-    stringr::str_detect(x, "membership|member") ~ "Membership",
-    stringr::str_detect(x, "public|government|institutional|university|state") ~ "Public / institutional",
-    stringr::str_detect(x, "grant|philanthrop|foundation|donation|sponsor") ~ "Grant / philanthropic",
-    stringr::str_detect(x, "commercial|subscription|client|freemium|service|sales|market") ~ "Commercial / service revenue",
-    stringr::str_detect(x, "volunteer|community|in kind") ~ "Community / in-kind",
-    stringr::str_detect(x, "unknown|unclear") ~ "Unknown",
-    TRUE ~ "Other / mixed"
+    x == "author_pays" ~ "APC / author fees",
+    x == "institutional_support" ~ "Public / institutional",
+    x == "membership_model" ~ "Membership",
+    x == "grant_funded" ~ "Grant / philanthropic",
+    x == "service_sales" ~ "Commercial / service revenue",
+    x == "mixed_model" ~ "Mixed / hybrid",
+    x == "volunteer_based" ~ "Community / in-kind",
+    x %in% c("unknown", "unclear", "", "na", "n/a") | is.na(x) ~ "Unknown",
+    TRUE ~ "Other"
   )
 }
+
 
 clean_economic_logic <- function(x) {
   x <- clean_text(x)
@@ -1519,12 +1525,12 @@ ui <- page_navbar(
           layout_columns(
             col_widths = c(12, 12),
             plot_card("Funding models", plotlyOutput("funding_model_plot", height = 430)),
-            plot_card("Economic logics", plotlyOutput("economic_logic_plot", height = 430))
+            plot_card("Funding models by region", plotlyOutput("economic_logic_plot", height = 500))
           ),
           layout_columns(
             col_widths = c(12, 12),
             plot_card("Roles by region", plotlyOutput("econ_role_region_matrix", height = 500)),
-            plot_card("Funding models by region", plotlyOutput("econ_funding_region_matrix", height = 500))
+            plot_card("Regional funding matrix", plotlyOutput("econ_funding_region_matrix", height = 500))
           ),
           plot_card("Country profiles by economic role", plotlyOutput("econ_country_role_plot", height = 620)),
           plot_card("Economic role records", DTOutput("economic_table"))
@@ -1601,7 +1607,7 @@ ui <- page_navbar(
         external_link_card("Suggest an initiative", "Submit a missing Open Science initiative to enrich the directory.", add_initiative_form_url, "Open form"),
         external_link_card("Report an error", "Flag a correction or missing information for an existing record.", report_error_form_url, "Open form"),
         div(class = "action-card", h3("Download dataset"), p("Download the harmonised master table currently used by the dashboard."), downloadButton("download_dataset_csv", "Download CSV", class = "btn-primary")),
-        external_link_card("Source code", "Access the application source code on GitHub.", source_code_url, "View source")
+        external_link_card("Source code", "Access the source code of the COSMI Hub application.", source_code_url, "Open GitHub")
       ),
 
       uiOutput("data_quality_strip"),
@@ -1618,7 +1624,6 @@ ui <- page_navbar(
       )
     )
   ),
-
   nav_panel(
     "About",
     div(
@@ -2991,9 +2996,62 @@ server <- function(input, output, session) {
   })
 
   output$economic_logic_plot <- renderPlotly({
-    validate(need(nrow(econ_filtered()) > 0, "No economic records for current selection."))
-    bar_plotly(econ_filtered(), economic_logic, top_n = 10)
+    df <- econ_filtered() |>
+      filter(region != "Unknown", funding_model != "Unknown") |>
+      count(region, funding_model, name = "n") |>
+      group_by(region) |>
+      mutate(region_total = sum(n), share_within_region = n / region_total) |>
+      ungroup() |>
+      filter(region_total >= 3)
+
+    validate(need(nrow(df) > 0, "No region/funding combination for current selection."))
+
+    funding_order <- df |>
+      group_by(funding_model) |>
+      summarise(global_n = sum(n), .groups = "drop") |>
+      arrange(desc(global_n)) |>
+      pull(funding_model)
+
+    region_order <- df |>
+      group_by(region) |>
+      summarise(region_total = max(region_total), .groups = "drop") |>
+      arrange(region) |>
+      pull(region)
+
+    df <- df |>
+      mutate(
+        funding_model = factor(funding_model, levels = funding_order),
+        region = factor(region, levels = rev(region_order))
+      )
+
+    p <- ggplot(
+      df,
+      aes(
+        x = funding_model,
+        y = region,
+        fill = share_within_region,
+        text = paste0(
+          region, "<br>", funding_model, "<br>",
+          scales::percent(share_within_region, accuracy = 1),
+          " within region<br>", n, " of ", region_total, " initiatives"
+        )
+      )
+    ) +
+      geom_tile(color = "white", linewidth = 0.55) +
+      geom_text(aes(label = ifelse(share_within_region >= 0.12, scales::percent(share_within_region, accuracy = 1), "")), size = 3.1, color = "#17324D") +
+      scale_fill_gradient(low = "#F4F7FA", high = "#12395B", labels = scales::percent_format()) +
+      labs(x = NULL, y = NULL, fill = "Share within region") +
+      theme_minimal(base_size = 10) +
+      theme(
+        axis.text.x = element_text(angle = 35, hjust = 1),
+        panel.grid = element_blank(),
+        legend.position = "right"
+      )
+
+    ggplotly(p, tooltip = "text") |> plotly_cosmi_config() |>
+      layout(margin = list(l = 20, r = 20, t = 10, b = 135))
   })
+
 
   output$econ_role_region_matrix <- renderPlotly({
     df <- econ_filtered() |>
@@ -3488,6 +3546,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
 
 # rsconnect::deployApp(appDir = "C:/Users/amaddi/Documents/Projets financés/OPENIT/openit/osinit_app/osinit", appName = "openit")
