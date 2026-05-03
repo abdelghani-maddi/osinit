@@ -1,5 +1,5 @@
 # ============================================================
-# COSMI Hub V15 — Community Open Science Mapping Initiatives Hub
+# COSMI Hub V10 — Community Open Science Mapping Initiatives Hub
 # ============================================================
 #
 # Purpose
@@ -222,24 +222,18 @@ clean_governance_family <- function(x) {
 }
 
 clean_funding_model <- function(x) {
-  # Funding modalities are now controlled in the master table.
-  # Keep underscores so categories such as author_pays remain stable.
-  x <- stringr::str_to_lower(as.character(x))
-  x <- stringr::str_squish(x)
-
+  x <- clean_text(x)
   dplyr::case_when(
-    x == "author_pays" ~ "APC / author fees",
-    x == "institutional_support" ~ "Public / institutional",
-    x == "membership_model" ~ "Membership",
-    x == "grant_funded" ~ "Grant / philanthropic",
-    x == "service_sales" ~ "Commercial / service revenue",
-    x == "mixed_model" ~ "Mixed / hybrid",
-    x == "volunteer_based" ~ "Community / in-kind",
-    x %in% c("unknown", "unclear", "", "na", "n/a") | is.na(x) ~ "Unknown",
-    TRUE ~ "Other"
+    stringr::str_detect(x, "apc|article processing") ~ "APC / author fees",
+    stringr::str_detect(x, "membership|member") ~ "Membership",
+    stringr::str_detect(x, "public|government|institutional|university|state") ~ "Public / institutional",
+    stringr::str_detect(x, "grant|philanthrop|foundation|donation|sponsor") ~ "Grant / philanthropic",
+    stringr::str_detect(x, "commercial|subscription|client|freemium|service|sales|market") ~ "Commercial / service revenue",
+    stringr::str_detect(x, "volunteer|community|in kind") ~ "Community / in-kind",
+    stringr::str_detect(x, "unknown|unclear") ~ "Unknown",
+    TRUE ~ "Other / mixed"
   )
 }
-
 
 clean_economic_logic <- function(x) {
   x <- clean_text(x)
@@ -413,9 +407,9 @@ build_open_science_dimensions <- function(master_df) {
 
   master_df |>
     transmute(
-      initiative_id = normalise_empty(first_existing(cur_data_all(), c("initiative_id", "id"))),
-      name = normalise_empty(first_existing(cur_data_all(), c("name", "initiative_name"))),
-      evidence = normalise_empty(first_existing(cur_data_all(), c("dimension_evidence_summary", "dimension_evidence", "coding_notes")), "")
+      initiative_id = normalise_empty(first_existing(pick(everything()), c("initiative_id", "id"))),
+      name = normalise_empty(first_existing(pick(everything()), c("name", "initiative_name"))),
+      evidence = normalise_empty(first_existing(pick(everything()), c("dimension_evidence_summary", "dimension_evidence", "coding_notes")), "")
     ) |>
     bind_cols(master_df |> select(all_of(available_dims))) |>
     mutate(across(all_of(available_dims), normalise_flag)) |>
@@ -428,13 +422,13 @@ build_open_science_dimensions <- function(master_df) {
 build_economic_role <- function(master_df) {
   master_df |>
     transmute(
-      initiative_id = normalise_empty(first_existing(cur_data_all(), c("initiative_id", "id"))),
-      name = normalise_empty(first_existing(cur_data_all(), c("name", "initiative_name"))),
-      role_in_ecosystem = normalise_empty(first_existing(cur_data_all(), c("role_in_ecosystem", "economic_role", "role"))),
-      funding_model = normalise_empty(first_existing(cur_data_all(), c("funding_model"))),
-      funding_source = normalise_empty(first_existing(cur_data_all(), c("funding_source", "funding_source_hint", "source"))),
-      economic_logic = normalise_empty(first_existing(cur_data_all(), c("economic_logic"))),
-      notes = normalise_empty(first_existing(cur_data_all(), c("economic_notes", "notes", "coding_notes")), "")
+      initiative_id = normalise_empty(first_existing(pick(everything()), c("initiative_id", "id"))),
+      name = normalise_empty(first_existing(pick(everything()), c("name", "initiative_name"))),
+      role_in_ecosystem = normalise_empty(first_existing(pick(everything()), c("role_in_ecosystem", "economic_role", "role"))),
+      funding_model = normalise_empty(first_existing(pick(everything()), c("funding_model"))),
+      funding_source = normalise_empty(first_existing(pick(everything()), c("funding_source", "funding_source_hint", "source"))),
+      economic_logic = normalise_empty(first_existing(pick(everything()), c("economic_logic"))),
+      notes = normalise_empty(first_existing(pick(everything()), c("economic_notes", "notes", "coding_notes")), "")
     ) |>
     filter(initiative_id != "Unknown")
 }
@@ -442,13 +436,13 @@ build_economic_role <- function(master_df) {
 build_diversity_profile <- function(master_df) {
   master_df |>
     transmute(
-      initiative_id = normalise_empty(first_existing(cur_data_all(), c("initiative_id", "id"))),
-      name = normalise_empty(first_existing(cur_data_all(), c("name", "initiative_name"))),
-      non_profit = normalise_flag(first_existing(cur_data_all(), c("non_profit", "nonprofit"))),
-      community_led = normalise_flag(first_existing(cur_data_all(), c("community_led", "community_governance"))),
-      open_source_tools = normalise_flag(first_existing(cur_data_all(), c("open_source_tools", "open_source", "opensource"))),
-      multilingual = normalise_flag(first_existing(cur_data_all(), c("multilingual"))),
-      global_south_presence = normalise_empty(first_existing(cur_data_all(), c("global_south_presence", "global_south_inclusion")), "Unknown")
+      initiative_id = normalise_empty(first_existing(pick(everything()), c("initiative_id", "id"))),
+      name = normalise_empty(first_existing(pick(everything()), c("name", "initiative_name"))),
+      non_profit = normalise_flag(first_existing(pick(everything()), c("non_profit", "nonprofit"))),
+      community_led = normalise_flag(first_existing(pick(everything()), c("community_led", "community_governance"))),
+      open_source_tools = normalise_flag(first_existing(pick(everything()), c("open_source_tools", "open_source", "opensource"))),
+      multilingual = normalise_flag(first_existing(pick(everything()), c("multilingual"))),
+      global_south_presence = normalise_empty(first_existing(pick(everything()), c("global_south_presence", "global_south_inclusion")), "Unknown")
     ) |>
     filter(initiative_id != "Unknown")
 }
@@ -493,20 +487,20 @@ prepare_data_bundle <- function(master_raw_input) {
 
   master <- master_raw_input |>
     mutate(
-      initiative_id = normalise_empty(first_existing(cur_data_all(), c("initiative_id", "id"))),
-      name = normalise_empty(first_existing(cur_data_all(), c("name", "name_2", "name_17", "orgname", "org_name", "organization_name", "initiative_name"))),
-      short_name = normalise_empty(first_existing(cur_data_all(), c("short_name", "abbreviated_orgname", "abbreviated_org_name")), ""),
-      category = normalise_empty(first_existing(cur_data_all(), c("original_category", "category"))),
-      initiative_type = normalise_empty(first_existing(cur_data_all(), c("object_type_openit_v3", "object_type_openit", "object_type", "initiative_type"))),
-      lead_actor_type = normalise_empty(first_existing(cur_data_all(), c("lead_actor_type_openit_v3", "lead_actor_type_openit", "lead_actor_type"))),
-      governance_type = normalise_empty(first_existing(cur_data_all(), c("governance_type_openit_v3", "governance_type_openit", "governance_type"))),
-      scope = normalise_empty(first_existing(cur_data_all(), c("scope_openit_v3", "scope_openit", "scope"))),
-      country = normalise_empty(first_existing(cur_data_all(), c("country"))),
-      region = normalise_empty(first_existing(cur_data_all(), c("region", "continent"))),
-      website = normalise_empty(first_existing(cur_data_all(), c("website", "org_website", "orgwebsite")), ""),
-      latitude = suppressWarnings(as.numeric(first_existing(cur_data_all(), c("latitude", "lat"), NA))),
-      longitude = suppressWarnings(as.numeric(first_existing(cur_data_all(), c("longitude", "lon", "lng"), NA))),
-      data_quality = normalise_empty(first_existing(cur_data_all(), c("data_quality", "coding_status"), "To validate"))
+      initiative_id = normalise_empty(first_existing(pick(everything()), c("initiative_id", "id"))),
+      name = normalise_empty(first_existing(pick(everything()), c("name", "name_2", "name_17", "orgname", "org_name", "organization_name", "initiative_name"))),
+      short_name = normalise_empty(first_existing(pick(everything()), c("short_name", "abbreviated_orgname", "abbreviated_org_name")), ""),
+      category = normalise_empty(first_existing(pick(everything()), c("original_category", "category"))),
+      initiative_type = normalise_empty(first_existing(pick(everything()), c("object_type_openit_v3", "object_type_openit", "object_type", "initiative_type"))),
+      lead_actor_type = normalise_empty(first_existing(pick(everything()), c("lead_actor_type_openit_v3", "lead_actor_type_openit", "lead_actor_type"))),
+      governance_type = normalise_empty(first_existing(pick(everything()), c("governance_type_openit_v3", "governance_type_openit", "governance_type"))),
+      scope = normalise_empty(first_existing(pick(everything()), c("scope_openit_v3", "scope_openit", "scope"))),
+      country = normalise_empty(first_existing(pick(everything()), c("country"))),
+      region = normalise_empty(first_existing(pick(everything()), c("region", "continent"))),
+      website = normalise_empty(first_existing(pick(everything()), c("website", "org_website", "orgwebsite")), ""),
+      latitude = suppressWarnings(as.numeric(first_existing(pick(everything()), c("latitude", "lat"), NA))),
+      longitude = suppressWarnings(as.numeric(first_existing(pick(everything()), c("longitude", "lon", "lng"), NA))),
+      data_quality = normalise_empty(first_existing(pick(everything()), c("data_quality", "coding_status"), "To validate"))
     )
 
   master_full <- master |>
@@ -521,18 +515,18 @@ prepare_data_bundle <- function(master_raw_input) {
       governance_family = clean_governance_family(governance_type_raw),
       governance_type = governance_family,
       scope = clean_scope(scope_raw),
-      role_in_ecosystem = clean_object_type(first_existing(cur_data_all(), c("role_in_ecosystem", "economic_role", "role", "object_type_openit"))),
-      funding_model_raw = normalise_empty(first_existing(cur_data_all(), c("funding_model"))),
+      role_in_ecosystem = clean_object_type(first_existing(pick(everything()), c("role_in_ecosystem", "economic_role", "role", "object_type_openit"))),
+      funding_model_raw = normalise_empty(first_existing(pick(everything()), c("funding_model"))),
       funding_model = clean_funding_model(funding_model_raw),
-      funding_source = normalise_empty(first_existing(cur_data_all(), c("funding_source", "funding_source_hint", "source"))),
-      economic_logic_raw = normalise_empty(first_existing(cur_data_all(), c("economic_logic"))),
+      funding_source = normalise_empty(first_existing(pick(everything()), c("funding_source", "funding_source_hint", "source"))),
+      economic_logic_raw = normalise_empty(first_existing(pick(everything()), c("economic_logic"))),
       economic_logic = clean_economic_logic(economic_logic_raw),
-      non_profit = clean_yes_no_level(first_existing(cur_data_all(), c("non_profit", "nonprofit"))),
-      community_led = clean_yes_no_level(first_existing(cur_data_all(), c("community_led", "community_governance"))),
-      open_source_tools = clean_yes_no_level(first_existing(cur_data_all(), c("open_source_tools", "open_source", "opensource"))),
-      multilingual = clean_yes_no_level(first_existing(cur_data_all(), c("multilingual"))),
-      global_south_presence = clean_yes_no_level(first_existing(cur_data_all(), c("global_south_presence", "global_south_inclusion"))),
-      source_url = normalise_empty(first_existing(cur_data_all(), c("source", "source_url", "economic_source_url", "website")), "")
+      non_profit = clean_yes_no_level(first_existing(pick(everything()), c("non_profit", "nonprofit"))),
+      community_led = clean_yes_no_level(first_existing(pick(everything()), c("community_led", "community_governance"))),
+      open_source_tools = clean_yes_no_level(first_existing(pick(everything()), c("open_source_tools", "open_source", "opensource"))),
+      multilingual = clean_yes_no_level(first_existing(pick(everything()), c("multilingual"))),
+      global_south_presence = clean_yes_no_level(first_existing(pick(everything()), c("global_south_presence", "global_south_inclusion"))),
+      source_url = normalise_empty(first_existing(pick(everything()), c("source", "source_url", "economic_source_url", "website")), "")
     ) |>
     filter(!is.na(initiative_type), initiative_type != "Unknown")
 
@@ -1525,12 +1519,12 @@ ui <- page_navbar(
           layout_columns(
             col_widths = c(12, 12),
             plot_card("Funding models", plotlyOutput("funding_model_plot", height = 430)),
-            plot_card("Funding models by region", plotlyOutput("economic_logic_plot", height = 500))
+            plot_card("Regional funding profiles", plotlyOutput("economic_logic_plot", height = 430))
           ),
           layout_columns(
             col_widths = c(12, 12),
             plot_card("Roles by region", plotlyOutput("econ_role_region_matrix", height = 500)),
-            plot_card("Regional funding matrix", plotlyOutput("econ_funding_region_matrix", height = 500))
+            plot_card("Funding models by region", plotlyOutput("econ_funding_region_matrix", height = 500))
           ),
           plot_card("Country profiles by economic role", plotlyOutput("econ_country_role_plot", height = 620)),
           plot_card("Economic role records", DTOutput("economic_table"))
@@ -1607,7 +1601,7 @@ ui <- page_navbar(
         external_link_card("Suggest an initiative", "Submit a missing Open Science initiative to enrich the directory.", add_initiative_form_url, "Open form"),
         external_link_card("Report an error", "Flag a correction or missing information for an existing record.", report_error_form_url, "Open form"),
         div(class = "action-card", h3("Download dataset"), p("Download the harmonised master table currently used by the dashboard."), downloadButton("download_dataset_csv", "Download CSV", class = "btn-primary")),
-        external_link_card("Source code", "Access the source code of the COSMI Hub application.", source_code_url, "Open GitHub")
+        external_link_card("Source code", "Access the application source code on GitHub.", source_code_url, "Open GitHub")
       ),
 
       uiOutput("data_quality_strip"),
@@ -1624,6 +1618,7 @@ ui <- page_navbar(
       )
     )
   ),
+
   nav_panel(
     "About",
     div(
@@ -2927,7 +2922,7 @@ server <- function(input, output, session) {
         funding_model = normalise_empty(funding_model),
         funding_source = normalise_empty(funding_source),
         economic_logic = normalise_empty(economic_logic),
-        notes = normalise_empty(first_existing(cur_data_all(), c("economic_notes", "notes")), ""),
+        notes = normalise_empty(first_existing(pick(everything()), c("economic_notes", "notes")), ""),
         initiative_type = as.character(initiative_type),
         lead_actor_type, governance_type, country, region, website
       )
@@ -3000,58 +2995,38 @@ server <- function(input, output, session) {
       filter(region != "Unknown", funding_model != "Unknown") |>
       count(region, funding_model, name = "n") |>
       group_by(region) |>
-      mutate(region_total = sum(n), share_within_region = n / region_total) |>
+      mutate(region_total = sum(n), share = n / region_total) |>
       ungroup() |>
       filter(region_total >= 3)
 
-    validate(need(nrow(df) > 0, "No region/funding combination for current selection."))
-
-    funding_order <- df |>
-      group_by(funding_model) |>
-      summarise(global_n = sum(n), .groups = "drop") |>
-      arrange(desc(global_n)) |>
-      pull(funding_model)
-
-    region_order <- df |>
-      group_by(region) |>
-      summarise(region_total = max(region_total), .groups = "drop") |>
-      arrange(region) |>
-      pull(region)
-
-    df <- df |>
-      mutate(
-        funding_model = factor(funding_model, levels = funding_order),
-        region = factor(region, levels = rev(region_order))
-      )
+    validate(need(nrow(df) > 0, "No funding/region combination for current selection."))
 
     p <- ggplot(
       df,
       aes(
         x = funding_model,
-        y = region,
-        fill = share_within_region,
+        y = forcats::fct_reorder(region, region_total),
+        fill = share,
         text = paste0(
           region, "<br>", funding_model, "<br>",
-          scales::percent(share_within_region, accuracy = 1),
-          " within region<br>", n, " of ", region_total, " initiatives"
+          scales::percent(share, accuracy = 1), " within region",
+          "<br>", n, " initiatives"
         )
       )
     ) +
-      geom_tile(color = "white", linewidth = 0.55) +
-      geom_text(aes(label = ifelse(share_within_region >= 0.12, scales::percent(share_within_region, accuracy = 1), "")), size = 3.1, color = "#17324D") +
-      scale_fill_gradient(low = "#F4F7FA", high = "#12395B", labels = scales::percent_format()) +
-      labs(x = NULL, y = NULL, fill = "Share within region") +
+      geom_tile(color = "white", linewidth = 0.45) +
+      scale_fill_gradient(low = "#F2F5F8", high = "#12395B", labels = scales::percent_format(), limits = c(0, 1)) +
+      labs(x = NULL, y = NULL, fill = "Within region") +
       theme_minimal(base_size = 10) +
       theme(
         axis.text.x = element_text(angle = 35, hjust = 1),
         panel.grid = element_blank(),
-        legend.position = "right"
+        plot.margin = margin(8, 8, 8, 8)
       )
 
     ggplotly(p, tooltip = "text") |> plotly_cosmi_config() |>
-      layout(margin = list(l = 20, r = 20, t = 10, b = 135))
+      layout(margin = list(l = 20, r = 20, t = 10, b = 130))
   })
-
 
   output$econ_role_region_matrix <- renderPlotly({
     df <- econ_filtered() |>
