@@ -1468,7 +1468,7 @@ ui <- page_navbar(
         filter_box(
           h3("Dimension explorer"),
           selectInput("dimension_filter", "Dimension", choices = c("All", unesco_categories), selected = "All"),
-          checkboxGroupInput("level_filter", "Coding level", choices = c("Yes", "Possible", "No", "Unknown"), selected = c("Yes", "Possible")),
+          checkboxGroupInput("level_filter", "Coding level", choices = c("Yes", "Possible", "No", "Unknown"), selected = c("Yes", "No")),
           sliderInput("min_cooccurrence", "Minimum co-occurrence", min = 1, max = 20, value = 3, step = 1),
           p(class = "small-note", "Select one dimension to inspect its associated initiatives. Keep several coding levels selected for a broader exploratory view.")
         ),
