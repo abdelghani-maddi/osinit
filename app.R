@@ -1,5 +1,5 @@
 # ============================================================
-# COSMI Hub V10 — Community Open Science Mapping Initiatives Hub
+# COSMI Hub V2.18 — Community Open Science Mapping Initiatives Hub
 # ============================================================
 #
 # Purpose
@@ -49,7 +49,7 @@
 # Dependencies are declared in one place. The app stops early with a clear message if one is missing.
 packages <- c(
   "shiny", "bslib", "dplyr", "tidyr", "stringr", "ggplot2",
-  "plotly", "DT", "leaflet", "googlesheets4", "readxl", "scales", "forcats", "readr", "purrr", "digest"
+  "plotly", "DT", "leaflet", "googlesheets4", "readxl", "scales", "forcats", "readr", "purrr", "digest", "igraph", "ggalluvial"
 )
 
 missing_packages <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
@@ -79,6 +79,9 @@ library(forcats)
 library(readr)
 library(purrr)
 library(digest)
+library(ggalluvial)
+library(igraph)
+
 
 # ---- 01b. Global options ----
 # Raise the Shiny upload limit for potential local datasets.
@@ -310,7 +313,7 @@ use_google_sheets <- tolower(Sys.getenv("COSMI_USE_GOOGLE_SHEETS", "true")) %in%
 
 sheet_url <- Sys.getenv(
   "COSMI_SHEET_URL",
-  unset = "https://docs.google.com/spreadsheets/d/1o8r97sTmS3JQgwJD9kqpVm5WAucodZZqYOat5h8j-3o"
+  unset = "https://docs.google.com/spreadsheets/d/1o8r97sTmS3JQgwJD9kqpVm5WAucodZZqYOat5h8j-3o/edit?gid=143047838#gid=143047838"
 )
 
 local_data_path <- Sys.getenv(
@@ -598,11 +601,14 @@ cosmi_theme <- bs_theme(
 
 # ---- 04c. UI helpers and external URLs ----
 # Reusable card constructors and centralised Google Docs/Forms links.
-plot_card <- function(title, output) {
+plot_card <- function(title, output, note = NULL) {
   card(
     class = "cosmi-card",
     card_header(title),
-    card_body(output)
+    card_body(
+      output,
+      if (!is.null(note)) tags$p(class = "plot-note small-note", note)
+    )
   )
 }
 
@@ -679,11 +685,23 @@ project_logo_strip <- function(compact = FALSE) {
 # Navbar layout, page structure, custom CSS and output placeholders.
 ui <- page_navbar(
   id = "main_nav",
-  title = div(class = "brand-title", "COSMI Hub"),
+  title = tagList(
+    tags$span(style = "display:none;", "COSMI Hub"),
+    div(
+      class = "brand-block",
+      div(class = "brand-title", "COSMI Hub"),
+      div(
+        class = "navbar-data-tools brand-data-tools",
+        actionButton("refresh_data", "Refresh", class = "btn-sm", icon = icon("rotate")),
+        uiOutput("data_status_nav", inline = TRUE)
+      )
+    )
+  ),
   theme = cosmi_theme,
   bg = "#12395B",
   inverse = TRUE,
   header = tags$head(
+    tags$script(HTML("document.title = 'COSMI Hub';")),
     tags$link(rel = "icon", type = "image/png", href = "hub5.png"),
     tags$link(rel = "shortcut icon", type = "image/png", href = "hub5.png"),
     tags$script(HTML("
@@ -719,35 +737,65 @@ ui <- page_navbar(
         overflow-x: hidden;
       }
       .container-fluid, .bslib-page-navbar > .container-fluid { max-width: 100%; }
-      .navbar > .container-fluid { display: flex; align-items: center; justify-content: center; gap: 22px; }
+      .navbar > .container-fluid {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        position: relative;
+        min-height: 86px;
+        padding-left: 310px;
+        padding-right: 96px;
+      }
 
       .navbar {
-        min-height: 72px;
+        min-height: 86px;
         box-shadow: 0 2px 18px rgba(0,0,0,0.12);
       }
 
       .navbar-brand {
-        margin-right: 34px !important;
-        padding-left: 10px;
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-right: 0 !important;
+        padding-left: 0;
+        text-decoration: none !important;
+        min-width: 245px;
+        z-index: 3;
+      }
+
+      .brand-block {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 7px;
+        padding: 8px 0 7px 0;
       }
 
       .navbar-collapse {
         flex-grow: 0;
+        justify-content: center;
       }
 
       .navbar-nav {
         align-items: center;
-        gap: 16px;
+        justify-content: center;
+        gap: 18px;
       }
 
       .navbar-openit-logo {
-        margin-left: auto;
-        margin-right: 22px;
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: 0;
+        margin-right: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        height: 54px;
-        width: 54px;
+        height: 50px;
+        width: 50px;
         padding: 7px;
         border-radius: 18px;
         background: #FFFFFF;
@@ -756,7 +804,7 @@ ui <- page_navbar(
       }
 
       .navbar-openit-logo:hover {
-        transform: translateY(-1px);
+        transform: translateY(calc(-50% - 1px));
         box-shadow: 0 8px 22px rgba(0,0,0,0.28);
       }
 
@@ -767,9 +815,58 @@ ui <- page_navbar(
       }
 
       .brand-title {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
         font-weight: 850;
         letter-spacing: -0.025em;
         font-size: 1.25rem;
+        line-height: 1;
+        color: #FFFFFF;
+        padding: 10px 18px 10px 13px;
+        min-width: 218px;
+        justify-content: flex-start;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(42,174,159,0.11));
+        border: 1px solid rgba(255,255,255,0.22);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 22px rgba(0,0,0,0.16);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .brand-title::before {
+        content: '';
+        width: 24px;
+        height: 24px;
+        flex: 0 0 24px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 50% 50%, #2AAE9F 0 3px, transparent 4px),
+          radial-gradient(circle at 22% 24%, rgba(255,255,255,0.95) 0 2.5px, transparent 3.5px),
+          radial-gradient(circle at 76% 30%, rgba(255,255,255,0.85) 0 2.5px, transparent 3.5px),
+          radial-gradient(circle at 30% 78%, rgba(255,255,255,0.78) 0 2.5px, transparent 3.5px),
+          linear-gradient(135deg, rgba(42,174,159,0.44), rgba(28,120,144,0.18));
+        border: 1px solid rgba(255,255,255,0.24);
+        box-shadow: 0 0 0 5px rgba(42,174,159,0.10);
+      }
+
+      .brand-title::after {
+        content: '';
+        position: absolute;
+        left: 37px;
+        bottom: 6px;
+        width: 42px;
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #2AAE9F, rgba(42,174,159,0));
+      }
+
+      .navbar-brand:hover .brand-title {
+        transform: translateY(-1px);
+        background: linear-gradient(135deg, rgba(255,255,255,0.20), rgba(42,174,159,0.15));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 10px 26px rgba(0,0,0,0.20);
       }
 
       .navbar-nav .nav-link {
@@ -1123,6 +1220,13 @@ ui <- page_navbar(
         font-size: 0.92rem;
       }
 
+      .plot-note {
+        margin: 10px 4px 0 4px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(18, 57, 91, 0.08);
+        line-height: 1.45;
+      }
+
       .section-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1241,8 +1345,33 @@ ui <- page_navbar(
         border: 1px solid rgba(255,255,255,0.18);
       }
 
+      .brand-data-tools {
+        margin-left: 0;
+        gap: 7px;
+        font-size: 0.72rem;
+        width: 218px;
+        justify-content: flex-start;
+      }
+
+      .brand-data-tools .btn {
+        padding: 4px 9px;
+        font-size: 0.72rem;
+        line-height: 1.1;
+      }
+
+      .brand-data-tools .data-status-chip {
+        padding: 4px 8px;
+        font-size: 0.70rem;
+        background: rgba(255,255,255,0.08);
+      }
+
+      .brand-data-tools .data-status-sub {
+        font-size: 0.66rem;
+      }
+
       @media (max-width: 1180px) {
         .navbar-data-tools .data-status-chip { display: none; }
+        .brand-data-tools .data-status-chip { display: inline-flex; }
       }
 
       @media (max-width: 1100px) {
@@ -1289,21 +1418,42 @@ ui <- page_navbar(
       .quality-chip strong { display: block; color: #0F2E49; font-size: 1.35rem; letter-spacing: -0.03em; }
       .quality-chip span { display: block; color: #617184; font-weight: 650; margin-top: 2px; }
       @media (max-width: 992px) {
-        .navbar > .container-fluid { justify-content: flex-start; gap: 10px; }
-        .navbar-brand { margin-right: 8px !important; }
+        .navbar > .container-fluid {
+          justify-content: flex-start;
+          gap: 10px;
+          min-height: auto;
+          padding-left: 12px;
+          padding-right: 12px;
+        }
+        .navbar-brand {
+          position: relative;
+          left: auto;
+          top: auto;
+          transform: none;
+          margin-right: 8px !important;
+          min-width: 190px;
+        }
+        .brand-title { min-width: 190px; }
         .navbar-openit-logo {
+          position: relative;
+          right: auto;
+          top: auto;
+          transform: none;
           margin-left: 0;
           height: 46px;
           width: 46px;
           padding: 6px;
         }
+        .navbar-openit-logo:hover { transform: translateY(-1px); }
         .navbar-openit-logo img {
           max-height: 34px;
           max-width: 34px;
         }
-        .navbar-collapse { padding-bottom: 14px; flex-grow: 1; }
+        .navbar-collapse { padding-bottom: 14px; flex-grow: 1; justify-content: flex-start; }
+        .navbar-nav { align-items: flex-start; gap: 0; }
         .navbar-nav .nav-link { padding: 10px 0 !important; margin: 0; border-bottom-width: 0; }
-        .navbar-data-tools { margin-left: 0; width: 100%; justify-content: flex-start; padding: 8px 0; }
+        .navbar-data-tools { margin-left: 0; justify-content: flex-start; padding: 4px 0; }
+        .brand-data-tools { width: auto; }
         .page-wrap { padding: 22px 16px 42px 16px; }
         .hero { border-radius: 22px; padding: 28px 24px; }
         .filter-card { position: relative; top: auto; }
@@ -1341,7 +1491,11 @@ ui <- page_navbar(
         uiOutput("kpi_types")
       ),
 
-      plot_card("Global distribution", leafletOutput("overview_map", height = 520)),
+      plot_card(
+        "Global distribution",
+        leafletOutput("overview_map", height = 520),
+        "Each marker represents one initiative with usable geographic coordinates. The map is descriptive: it shows where initiatives are located, not their intensity or influence. Use it to identify territorial concentration and explore individual records."
+      ),
 
       plot_card(
         "Country-level overview",
@@ -1355,7 +1509,11 @@ ui <- page_navbar(
 
       layout_columns(
         col_widths = c(12, 12),
-        plot_card("Dominant initiative types", plotlyOutput("overview_type_plot", height = 430)),
+        plot_card(
+          "Dominant initiative types",
+          plotlyOutput("overview_type_plot", height = 430),
+          "This chart counts initiatives by harmonised object type. It gives a first overview of the structure of the directory and highlights which kinds of open science initiatives are most represented."
+        ),
         plot_card("Selected initiatives", DTOutput("overview_selected_table"))
       ),
 
@@ -1391,14 +1549,38 @@ ui <- page_navbar(
             uiOutput("territory_kpi_community"),
             uiOutput("territory_kpi_nonprofit")
           ),
-          plot_card("Regional volume by initiative type", plotlyOutput("region_type_count_plot", height = 500)),
-          plot_card("Country volume by initiative type", plotlyOutput("country_type_count_plot", height = 620)),
-          plot_card("Regional profiles by initiative type", plotlyOutput("region_distribution_plot", height = 520)),
-          plot_card("Country profiles by initiative type", plotlyOutput("country_type_share_plot", height = 640)),
+          plot_card(
+            "Regional volume by initiative type",
+            plotlyOutput("region_type_count_plot", height = 500),
+            "Bars count initiatives by region and type. This is a volume view: larger bars indicate more records in the dataset, not necessarily a higher level of open science activity in absolute terms."
+          ),
+          plot_card(
+            "Country volume by initiative type",
+            plotlyOutput("country_type_count_plot", height = 620),
+            "This chart identifies countries with the largest number of recorded initiatives and shows their composition by type. It is useful for spotting national concentrations and comparing their internal profiles."
+          ),
+          plot_card(
+            "Regional profiles by initiative type",
+            plotlyOutput("region_distribution_plot", height = 520),
+            "Unlike the volume charts, this view compares proportions within each region. It helps distinguish regions that have many initiatives from regions that have a distinctive mix of initiative types."
+          ),
+          plot_card(
+            "Country profiles by initiative type",
+            plotlyOutput("country_type_share_plot", height = 640),
+            "For each country, colours represent the share of each initiative type among the recorded initiatives. Countries with few records should be interpreted cautiously because small counts can produce large shares."
+          ),
           layout_columns(
             col_widths = c(12, 12),
-            plot_card("Regional profile matrix", plotlyOutput("region_type_share_matrix", height = 460)),
-            plot_card("Governance profile", plotlyOutput("territory_governance_plot", height = 460))
+            plot_card(
+              "Regional profile matrix",
+              plotlyOutput("region_type_share_matrix", height = 460),
+              "The matrix summarises the regional distribution of initiative types. Darker cells indicate stronger representation of a type within a region, making regional specialisations easier to compare."
+            ),
+            plot_card(
+              "Governance profile",
+              plotlyOutput("territory_governance_plot", height = 460),
+              "This view compares selected governance and inclusion indicators across the current territorial selection. Values are based on coded attributes in the dataset and should be read as descriptive signals."
+            )
           )
         )
       )
@@ -1417,9 +1599,21 @@ ui <- page_navbar(
 
       layout_columns(
         col_widths = c(12, 12, 12),
-        plot_card("Initiative types", plotlyOutput("type_distribution_plot", height = 420)),
-        plot_card("Lead actors by type", plotlyOutput("type_actor_matrix", height = 420)),
-        plot_card("Scope by type", plotlyOutput("type_scope_matrix", height = 420))
+        plot_card(
+          "Initiative types",
+          plotlyOutput("type_distribution_plot", height = 420),
+          "This chart shows the distribution of initiatives across the harmonised COSMI object types. It is the reference view for understanding the overall composition of the dataset."
+        ),
+        plot_card(
+          "Lead actors by type",
+          plotlyOutput("type_actor_matrix", height = 420),
+          "Rows and columns cross initiative types with lead actor categories. Darker cells indicate stronger associations, showing which actors tend to lead which kinds of initiatives."
+        ),
+        plot_card(
+          "Scope by type",
+          plotlyOutput("type_scope_matrix", height = 420),
+          "This matrix relates initiative types to their declared scope, such as local, national, regional or global. It helps identify which types are mainly territorial and which operate across borders."
+        )
       ),
 
       layout_columns(
@@ -1433,10 +1627,22 @@ ui <- page_navbar(
         div(
           layout_columns(
             col_widths = c(12, 12),
-            plot_card("Cluster sizes", plotlyOutput("cluster_size_plot", height = 390)),
-            plot_card("Cluster profile", plotlyOutput("cluster_profile_plot", height = 390))
+            plot_card(
+              "Cluster sizes",
+              plotlyOutput("cluster_size_plot", height = 390),
+              "Initiatives are grouped empirically from several coded attributes. This chart shows how many initiatives fall into each cluster, helping assess whether the clustering is balanced or dominated by one group."
+            ),
+            plot_card(
+              "Cluster profile",
+              plotlyOutput("cluster_profile_plot", height = 390),
+              "This plot describes the main features of each empirical cluster. It should be read as an exploratory typology: clusters summarize similarities in coded characteristics, not predefined categories."
+            )
           ),
-          plot_card("Hierarchical structure", plotOutput("cluster_dendrogram", height = 430)),
+          plot_card(
+            "Cluster hierarchy",
+            plotOutput("cluster_dendrogram", height = 460),
+            "This tree shows how close the initiatives are to one another based on the variables used in the empirical typology. Coloured boxes correspond to the selected number of clusters."
+          ),
           downloadButton("download_clusters", "Download cluster results", class = "btn-outline-primary"),
           br(), br(),
           plot_card("Clustered initiatives", DTOutput("cluster_table"))
@@ -1464,6 +1670,8 @@ ui <- page_navbar(
           selectInput("dimension_filter", "Dimension", choices = c("All", unesco_categories), selected = "All"),
           checkboxGroupInput("level_filter", "Coding level", choices = c("Yes", "Possible", "No", "Unknown"), selected = c("Yes", "No")),
           sliderInput("min_cooccurrence", "Minimum co-occurrence", min = 1, max = 20, value = 3, step = 1),
+          selectInput("dim_alluvial_focus", "Focused alluvial dimension", choices = unesco_categories, selected = "Open data"),
+          sliderInput("dim_alluvial_min_n", "Minimum path size", min = 1, max = 15, value = 3, step = 1),
           p(class = "small-note", "Select one dimension to inspect its associated initiatives. Keep several coding levels selected for a broader exploratory view.")
         ),
         div(
@@ -1474,13 +1682,34 @@ ui <- page_navbar(
             uiOutput("dimension_kpi_top"),
             uiOutput("dimension_kpi_pairs")
           ),
-          plot_card("Dimension volume", plotlyOutput("dimension_bar", height = 440)),
+          plot_card(
+            "Dimension volume",
+            plotlyOutput("dimension_bar", height = 440),
+            "Each bar counts initiative–dimension records. Levels correspond to the coding status for each dimension: Yes, Possible, No or Unknown. Click a bar to inspect the initiatives behind it."
+          ),
           layout_columns(
             col_widths = c(12, 12),
-            plot_card("Dimension co-occurrence network", plotlyOutput("dimension_network", height = 520)),
-            plot_card("Dimension co-occurrence matrix", plotlyOutput("dimension_co_matrix", height = 520))
+            plot_card(
+              "Dimension co-occurrence network",
+              plotlyOutput("dimension_network", height = 520),
+              "Nodes are Open Science dimensions; node size is the number of initiatives coded Yes/Possible. Links connect dimensions that appear in the same initiatives. Link thickness and layout are based on Jaccard similarity, so dimensions are closer when they co-occur often relative to their overall frequency."
+            ),
+            plot_card(
+              "Dimension co-occurrence matrix",
+              plotlyOutput("dimension_co_matrix", height = 520),
+              "This matrix shows the same pairwise relationships as the network. Darker cells mean stronger Jaccard similarity: shared initiatives divided by the total initiatives covered by either dimension."
+            )
           ),
-          plot_card("Dimensions by initiative type", plotlyOutput("dimension_type_matrix", height = 560)),
+          plot_card(
+            "Dimension profile by object type",
+            plotlyOutput("dimension_type_matrix", height = 560),
+            "This complementary view asks which kinds of initiatives carry each dimension. For each object type, the colour gives the share of initiatives coded Yes/Possible for a given dimension. Only object types with enough records are shown."
+          ),
+          plot_card(
+            "Pathways for a selected dimension",
+            plotlyOutput("dimension_focused_alluvial", height = 620),
+            "Choose a dimension on the left to see which kinds of initiatives carry it, who leads them and how they are funded. The minimum path size removes very small flows."
+          ),
           plot_card("Initiatives by dimension", DTOutput("dimension_initiatives_table"))
         )
       )
@@ -1515,18 +1744,42 @@ ui <- page_navbar(
             uiOutput("econ_kpi_funding"),
             uiOutput("econ_kpi_unknown")
           ),
-          plot_card("Roles in the ecosystem", plotlyOutput("role_plot", height = 440)),
-          layout_columns(
-            col_widths = c(12, 12),
-            plot_card("Funding models", plotlyOutput("funding_model_plot", height = 430)),
-            plot_card("Regional funding profiles", plotlyOutput("economic_logic_plot", height = 430))
+          plot_card(
+            "Roles in the ecosystem",
+            plotlyOutput("role_plot", height = 440),
+            "This chart counts initiatives by their main role or object type in the open science ecosystem. It helps separate infrastructures, policies, networks, publishing initiatives and other functional positions."
           ),
           layout_columns(
             col_widths = c(12, 12),
-            plot_card("Roles by region", plotlyOutput("econ_role_region_matrix", height = 500)),
-            plot_card("Funding models by region", plotlyOutput("econ_funding_region_matrix", height = 500))
+            plot_card(
+              "Funding models",
+              plotlyOutput("funding_model_plot", height = 430),
+              "This chart summarises the funding configurations recorded for initiatives. It highlights the balance between public, community, non-profit, commercial, mixed and unknown models."
+            ),
+            plot_card(
+              "Regional funding profiles",
+              plotlyOutput("economic_logic_plot", height = 430),
+              "This view compares funding profiles by region. It is intended to reveal differences in economic coordination patterns rather than to measure financial amounts."
+            )
           ),
-          plot_card("Country profiles by economic role", plotlyOutput("econ_country_role_plot", height = 620)),
+          layout_columns(
+            col_widths = c(12, 12),
+            plot_card(
+              "Roles by region",
+              plotlyOutput("econ_role_region_matrix", height = 500),
+              "The matrix crosses ecosystem roles with regions. Darker cells indicate roles that are more represented within a region, making regional economic profiles easier to compare."
+            ),
+            plot_card(
+              "Funding models by region",
+              plotlyOutput("econ_funding_region_matrix", height = 500),
+              "This matrix shows how funding models vary across regions. It is based on shares within regions, so it complements raw volume counts by focusing on profile differences."
+            )
+          ),
+          plot_card(
+            "Country profiles by economic role",
+            plotlyOutput("econ_country_role_plot", height = 620),
+            "For each country, the chart shows the composition of recorded initiatives by ecosystem role. Countries with low counts should be interpreted as exploratory cases rather than stable profiles."
+          ),
           plot_card("Economic role records", DTOutput("economic_table"))
         )
       )
@@ -1551,6 +1804,8 @@ ui <- page_navbar(
           selectInput("gov_country", "Country", choices = c("All", safe_distinct_values(master_full$country)), selected = "All"),
           selectInput("gov_type", "Initiative type", choices = c("All", safe_distinct_values(master_full$initiative_type)), selected = "All"),
           selectInput("gov_indicator", "Indicator", choices = c("All", "Community-led", "Non-profit", "Open-source tools", "Multilingual", "Global South presence"), selected = "All"),
+          selectInput("gov_flow_marker", "Interactive flow focus", choices = c("All positive markers", "Community-led", "Non-profit", "Open-source tools", "Multilingual", "Global South presence"), selected = "All positive markers"),
+          sliderInput("gov_flow_min", "Minimum flow size", min = 1, max = 20, value = 3, step = 1),
           actionButton("reset_gov", "Reset filters", class = "btn-outline-primary")
         ),
         div(
@@ -1562,22 +1817,52 @@ ui <- page_navbar(
             uiOutput("gov_kpi_global_south")
           ),
 
-          layout_columns(
-            col_widths = c(12, 12),
-            plot_card("Governance indicators by region", plotlyOutput("inclusion_region_matrix", height = 500)),
-            plot_card("Governance indicators by initiative type", plotlyOutput("inclusion_type_matrix", height = 500))
+          plot_card(
+            "Inclusion, governance and funding",
+            plotlyOutput("governance_inclusion_flow", height = 620),
+            "Follow the main inclusion markers through governance families and funding models. Use the controls on the left to focus on one marker or simplify the graph."
           ),
 
           layout_columns(
             col_widths = c(12, 12),
-            plot_card("Multilingualism by region", plotlyOutput("multilingual_region_plot", height = 460)),
-            plot_card("Global South presence by region", plotlyOutput("global_south_region_plot", height = 460))
+            plot_card(
+              "Governance indicators by region",
+              plotlyOutput("inclusion_region_matrix", height = 500),
+              "This matrix compares governance and inclusion indicators across regions. Darker cells indicate a higher share of initiatives with the selected attribute among records in that region."
+            ),
+            plot_card(
+              "Governance indicators by initiative type",
+              plotlyOutput("inclusion_type_matrix", height = 500),
+              "This matrix shows how governance and inclusion attributes vary by initiative type. It helps identify whether some types are more often community-led, non-profit, open-source or multilingual."
+            )
           ),
 
           layout_columns(
             col_widths = c(12, 12),
-            plot_card("Governance profiles", plotlyOutput("governance_profile_plot", height = 500)),
-            plot_card("Country comparison", plotlyOutput("governance_country_plot", height = 500))
+            plot_card(
+              "Multilingualism by region",
+              plotlyOutput("multilingual_region_plot", height = 460),
+              "This chart reports the share or count of initiatives with multilingual characteristics by region, depending on the active filters. It is a proxy for linguistic openness and accessibility."
+            ),
+            plot_card(
+              "Global South presence by region",
+              plotlyOutput("global_south_region_plot", height = 460),
+              "This chart shows the presence of initiatives connected to Global South contexts by region. It should be read as a coded dataset indicator, not as a full measure of geographic equity."
+            )
+          ),
+
+          layout_columns(
+            col_widths = c(12, 12),
+            plot_card(
+              "Governance profiles",
+              plotlyOutput("governance_profile_plot", height = 500),
+              "This view combines several governance indicators to compare initiative profiles. It is designed to reveal recurring configurations, such as community-led and non-profit combinations."
+            ),
+            plot_card(
+              "Country comparison",
+              plotlyOutput("governance_country_plot", height = 500),
+              "This chart compares governance and inclusion indicators across countries in the current selection. It is most reliable for countries with enough recorded initiatives."
+            )
           ),
 
           plot_card("Governance and inclusion records", DTOutput("diversity_table"))
@@ -1655,13 +1940,6 @@ ui <- page_navbar(
     )
   ),
   nav_spacer(),
-  nav_item(
-    div(
-      class = "navbar-data-tools",
-      actionButton("refresh_data", "Refresh", class = "btn-sm", icon = icon("rotate")),
-      uiOutput("data_status_nav", inline = TRUE)
-    )
-  ),
   nav_item(
     tags$a(
       href = openit_project_url, target = "_blank", rel = "noopener",
@@ -2029,7 +2307,7 @@ server <- function(input, output, session) {
     selected <- overview_selected_type()
 
     df <- master_full |>
-      select(initiative_id, name, initiative_type, lead_actor_type, governance_type, country, region, website)
+      select(initiative_id, name, initiative_type, lead_actor_type, governance_type, funding_model, country, region, website)
 
     if (!is.null(selected)) {
       df <- df |> filter(initiative_type == selected)
@@ -2510,17 +2788,42 @@ server <- function(input, output, session) {
 
     hc <- cluster_model()$hc
     k <- input$cluster_k %||% 5
+    rect_cols <- c("#2AAE9F", "#1E7890", "#12395B", "#E07A5F", "#8E6BBE", "#E9C46A", "#43AA8B", "#3B6F8C")
+
+    op <- par(
+      bg = "#FFFFFF",
+      mar = c(3.2, 4.5, 1.0, 1.2),
+      cex.axis = 0.85,
+      col.axis = "#536B7F",
+      col.lab = "#12395B",
+      fg = "#AFC4D3",
+      lend = "round"
+    )
+    on.exit(par(op), add = TRUE)
 
     plot(
       hc,
       labels = FALSE,
       hang = -1,
       main = "",
-      xlab = "Initiatives",
-      ylab = "Height",
-      sub = ""
+      xlab = "",
+      ylab = "",
+      sub = "",
+      axes = FALSE,
+      frame.plot = FALSE,
+      lwd = 1.15
     )
-    rect.hclust(hc, k = k, border = "#1E7890")
+
+    grid(nx = NA, ny = NULL, col = "#EEF3F7", lty = 1, lwd = 0.8)
+    axis(2, las = 1, col = "#B8CBD9", col.axis = "#536B7F", tck = -0.015)
+    mtext("Dissimilarity", side = 2, line = 2.8, col = "#12395B", font = 2, cex = 0.9)
+    mtext("Initiatives", side = 1, line = 2.0, col = "#12395B", font = 2, cex = 0.9)
+
+    rect.hclust(
+      hc,
+      k = k,
+      border = rect_cols[seq_len(k)]
+    )
   })
 
   output$download_clusters <- downloadHandler(
@@ -2621,23 +2924,56 @@ server <- function(input, output, session) {
   dimension_pairs <- reactive({
     records <- dims_filtered() |>
       filter(level %in% c("Yes", "Possible")) |>
-      distinct(initiative_id, dimension)
+      distinct(initiative_id, dimension) |>
+      filter(!is.na(initiative_id), !is.na(dimension), dimension != "", dimension != "Unknown")
 
-    pair_source <- records |>
-      group_by(initiative_id) |>
-      summarise(dims = list(sort(unique(dimension))), .groups = "drop") |>
-      filter(lengths(dims) >= 2)
+    dims <- sort(unique(records$dimension))
 
-    if (nrow(pair_source) == 0) {
-      return(tibble(from = character(), to = character(), weight = numeric()))
+    empty_pairs <- tibble(
+      from = character(),
+      to = character(),
+      weight = numeric(),
+      cooc = numeric(),
+      union = numeric(),
+      jaccard = numeric(),
+      distance = numeric()
+    )
+
+    if (length(dims) < 2) {
+      return(empty_pairs)
     }
 
-    purrr::map_dfr(pair_source$dims, function(x) {
-      cmb <- t(combn(x, 2))
-      tibble(from = cmb[, 1], to = cmb[, 2])
+    dim_sets <- records |>
+      group_by(dimension) |>
+      summarise(initiatives = list(unique(initiative_id)), .groups = "drop")
+
+    pair_mat <- utils::combn(dims, 2)
+
+    pairs <- purrr::map_dfr(seq_len(ncol(pair_mat)), function(i) {
+      from_i <- pair_mat[1, i]
+      to_i <- pair_mat[2, i]
+
+      set_from <- dim_sets$initiatives[[which(dim_sets$dimension == from_i)[1]]]
+      set_to <- dim_sets$initiatives[[which(dim_sets$dimension == to_i)[1]]]
+
+      cooc_i <- length(intersect(set_from, set_to))
+      union_i <- length(union(set_from, set_to))
+      jaccard_i <- if (union_i > 0) cooc_i / union_i else 0
+
+      tibble(
+        from = from_i,
+        to = to_i,
+        weight = cooc_i,
+        cooc = cooc_i,
+        union = union_i,
+        jaccard = jaccard_i,
+        distance = 1 - jaccard_i
+      )
     }) |>
-      count(from, to, name = "weight") |>
-      filter(weight >= (input$min_cooccurrence %||% 1))
+      filter(cooc > 0) |>
+      filter(cooc >= (input$min_cooccurrence %||% 1))
+
+    pairs
   })
 
   output$dimension_kpi_records <- renderUI({
@@ -2658,6 +2994,141 @@ server <- function(input, output, session) {
 
   output$dimension_kpi_pairs <- renderUI({
     render_kpi(comma(nrow(dimension_pairs())), "Dimension pairs", "Above threshold")
+  })
+
+  output$dimension_focused_alluvial <- renderPlotly({
+    selected_dimension <- input$dim_alluvial_focus %||% "Open data"
+    min_n <- input$dim_alluvial_min_n %||% 3
+
+    df <- dims_long |>
+      filter(level %in% c("Yes", "Possible"), dimension == selected_dimension) |>
+      distinct(initiative_id, dimension) |>
+      left_join(
+        master_full |>
+          select(initiative_id, role_in_ecosystem, lead_actor_type, governance_type, funding_model),
+        by = "initiative_id"
+      ) |>
+      mutate(
+        role = normalise_empty(role_in_ecosystem),
+        actor = normalise_empty(lead_actor_type),
+        funding = normalise_empty(funding_model),
+        governance = dplyr::case_when(
+          stringr::str_detect(stringr::str_to_lower(governance_type), "community") ~ "Community-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "non.?profit|foundation") ~ "Non-profit-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "public|government|institution") ~ "Public-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "academic|scholarly|university") ~ "Academic-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "commercial|publisher|company") ~ "Commercial-led",
+          TRUE ~ "Other / mixed"
+        )
+      ) |>
+      filter(!role %in% c("Unknown", "unknown / to validate"),
+             !actor %in% c("Unknown", "unknown / to validate"),
+             !funding %in% c("Unknown", "unknown / to validate")) |>
+      count(role, actor, funding, governance, name = "n") |>
+      filter(n >= min_n) |>
+      arrange(desc(n)) |>
+      slice_head(n = 18)
+
+    validate(need(nrow(df) > 0, "No path is visible with this threshold. Lower the minimum path size or select another dimension."))
+
+    node_labels <- unique(c(
+      paste0("Role: ", df$role),
+      paste0("Actor: ", df$actor),
+      paste0("Funding: ", df$funding)
+    ))
+    node_index <- setNames(seq_along(node_labels) - 1, node_labels)
+
+    links_1 <- df |>
+      transmute(
+        governance,
+        source_label = paste0("Role: ", role),
+        target_label = paste0("Actor: ", actor),
+        value = n,
+        text = paste0(role, " → ", actor, "<br>", n, " initiatives")
+      )
+
+    links_2 <- df |>
+      transmute(
+        governance,
+        source_label = paste0("Actor: ", actor),
+        target_label = paste0("Funding: ", funding),
+        value = n,
+        text = paste0(actor, " → ", funding, "<br>", n, " initiatives")
+      )
+
+    links <- bind_rows(links_1, links_2) |>
+      mutate(
+        source = unname(node_index[source_label]),
+        target = unname(node_index[target_label])
+      )
+
+    clean_node_labels <- stringr::str_replace(node_labels, "^(Role|Actor|Funding): ", "")
+    node_stage <- dplyr::case_when(
+      stringr::str_starts(node_labels, "Role:") ~ "Ecosystem role",
+      stringr::str_starts(node_labels, "Actor:") ~ "Lead actor",
+      TRUE ~ "Funding model"
+    )
+
+    gov_cols <- c(
+      "Academic-led" = "#536F8A",
+      "Commercial-led" = "#5B9AAA",
+      "Community-led" = "#66C2B8",
+      "Non-profit-led" = "#A9CBCD",
+      "Public-led" = "#C9DFE0",
+      "Other / mixed" = "#D7CDE8"
+    )
+    gov_link_cols <- c(
+      "Academic-led" = "rgba(83,111,138,0.62)",
+      "Commercial-led" = "rgba(91,154,170,0.58)",
+      "Community-led" = "rgba(102,194,184,0.58)",
+      "Non-profit-led" = "rgba(169,203,205,0.66)",
+      "Public-led" = "rgba(201,223,224,0.78)",
+      "Other / mixed" = "rgba(215,205,232,0.56)"
+    )
+    link_colors <- unname(gov_link_cols[links$governance])
+    link_colors[is.na(link_colors)] <- "rgba(42,174,159,0.35)"
+
+    node_colors <- dplyr::case_when(
+      node_stage == "Lead actor" ~ "#EAF1F5",
+      node_stage == "Funding model" ~ "#F1F6F8",
+      TRUE ~ "#F4F8FB"
+    )
+
+    plot_ly(
+      type = "sankey",
+      arrangement = "snap",
+      node = list(
+        label = clean_node_labels,
+        color = node_colors,
+        pad = 16,
+        thickness = 18,
+        line = list(color = "#BFD7E6", width = 1),
+        hovertemplate = paste0("<b>%{label}</b><br>", node_stage, "<extra></extra>")
+      ),
+      link = list(
+        source = links$source,
+        target = links$target,
+        value = links$value,
+        color = link_colors,
+        customdata = links$text,
+        hovertemplate = "%{customdata}<extra></extra>"
+      )
+    ) |>
+      layout(
+        title = list(
+          text = paste0("Organisational paths linked to ", selected_dimension),
+          x = 0.01,
+          font = list(size = 17)
+        ),
+        font = list(size = 12, color = "#12395B"),
+        margin = list(l = 20, r = 20, t = 60, b = 20),
+        annotations = list(
+          list(x = 0.01, y = -0.04, text = "Ecosystem role", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = 12, color = "#12395B")),
+          list(x = 0.50, y = -0.04, text = "Lead actor", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = 12, color = "#12395B")),
+          list(x = 0.98, y = -0.04, text = "Funding model", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = 12, color = "#12395B"))
+        )
+      ) |>
+      plotly_cosmi_config()
   })
 
   output$dimension_bar <- renderPlotly({
@@ -2707,24 +3178,64 @@ server <- function(input, output, session) {
 
   output$dimension_type_matrix <- renderPlotly({
     df <- dims_filtered() |>
-      left_join(master_full |> select(initiative_id, initiative_type), by = "initiative_id") |>
-      filter(dimension != "Unknown", initiative_type != "Unknown") |>
-      distinct(initiative_id, dimension, initiative_type) |>
-      count(dimension, initiative_type) |>
-      group_by(initiative_type) |>
-      mutate(type_total = sum(n), share = n / type_total) |>
-      ungroup() |>
-      filter(type_total >= 3)
+      filter(level %in% c("Yes", "Possible")) |>
+      filter(!is.na(dimension), dimension != "", dimension != "Unknown") |>
+      distinct(initiative_id, dimension) |>
+      left_join(
+        master_full |>
+          select(initiative_id, object_type) |>
+          mutate(object_type = normalise_empty(object_type)),
+        by = "initiative_id"
+      ) |>
+      filter(!is.na(object_type), object_type != "", object_type != "Unknown")
 
-    validate(need(nrow(df) > 0, "No dimension/type combination for current selection."))
+    type_totals <- df |>
+      distinct(initiative_id, object_type) |>
+      count(object_type, name = "type_total") |>
+      filter(type_total >= 3) |>
+      slice_max(type_total, n = 18, with_ties = FALSE)
 
-    p <- ggplot(df, aes(x = dimension, y = initiative_type, fill = share,
-                        text = paste0(
-                          initiative_type, "<br>", dimension, "<br>",
-                          scales::percent(share, accuracy = 1), " (", n, " records)"
-                        ))) +
+    df <- df |>
+      semi_join(type_totals, by = "object_type") |>
+      count(object_type, dimension, name = "n") |>
+      right_join(
+        tidyr::crossing(
+          object_type = type_totals$object_type,
+          dimension = sort(unique(as.character(df$dimension)))
+        ),
+        by = c("object_type", "dimension")
+      ) |>
+      mutate(n = tidyr::replace_na(n, 0L)) |>
+      left_join(type_totals, by = "object_type") |>
+      mutate(
+        share = ifelse(type_total > 0, n / type_total, NA_real_),
+        object_type_label = stringr::str_wrap(object_type, 30),
+        dimension_label = stringr::str_wrap(dimension, 28),
+        object_type_label = forcats::fct_reorder(as.factor(object_type_label), type_total)
+      )
+
+    validate(need(nrow(df) > 0, "No dimension/object type combination for current selection."))
+
+    p <- ggplot(
+      df,
+      aes(
+        x = dimension_label,
+        y = object_type_label,
+        fill = share,
+        text = paste0(
+          object_type, "<br>", dimension,
+          "<br>", scales::percent(share, accuracy = 1),
+          " (", n, " / ", type_total, " initiatives)"
+        )
+      )
+    ) +
       geom_tile(color = "white", linewidth = 0.45) +
-      scale_fill_gradient(low = "#EEF3F7", high = "#12395B", labels = scales::percent_format()) +
+      scale_fill_gradient(
+        low = "#EEF3F7",
+        high = "#12395B",
+        labels = scales::percent_format(accuracy = 1),
+        limits = c(0, max(df$share, na.rm = TRUE))
+      ) +
       labs(x = NULL, y = NULL, fill = "Within type") +
       theme_minimal(base_size = 10) +
       theme(
@@ -2734,7 +3245,7 @@ server <- function(input, output, session) {
       )
 
     ggplotly(p, tooltip = "text") |> plotly_cosmi_config() |>
-      layout(margin = list(l = 20, r = 20, t = 10, b = 130))
+      layout(margin = list(l = 20, r = 20, t = 10, b = 150))
   })
 
   output$dimension_network <- renderPlotly({
@@ -2742,7 +3253,8 @@ server <- function(input, output, session) {
 
     records <- dims_filtered() |>
       filter(level %in% c("Yes", "Possible")) |>
-      distinct(initiative_id, dimension)
+      distinct(initiative_id, dimension) |>
+      filter(!is.na(dimension), dimension != "", dimension != "Unknown")
 
     nodes <- records |>
       count(dimension, name = "size") |>
@@ -2765,31 +3277,61 @@ server <- function(input, output, session) {
       )
     }
 
-    n_nodes <- nrow(nodes)
-    theta <- seq(0, 2*pi, length.out = n_nodes + 1)[-(n_nodes + 1)]
+    g <- igraph::graph_from_data_frame(
+      edges |> select(from, to, jaccard, cooc),
+      vertices = nodes |> rename(name = dimension),
+      directed = FALSE
+    )
+
+    igraph::E(g)$weight <- pmax(igraph::E(g)$jaccard, 0.001)
+
+    layout_mat <- igraph::layout_with_fr(
+      g,
+      weights = igraph::E(g)$weight,
+      niter = 1000
+    )
+
     nodes <- nodes |>
       mutate(
-        x = cos(theta),
-        y = sin(theta),
+        x = layout_mat[match(dimension, igraph::V(g)$name), 1],
+        y = layout_mat[match(dimension, igraph::V(g)$name), 2],
         label = stringr::str_wrap(dimension, 22)
       )
 
-    edges <- edges |>
+    edges_plot <- edges |>
       left_join(nodes |> select(from = dimension, x_from = x, y_from = y), by = "from") |>
       left_join(nodes |> select(to = dimension, x_to = x, y_to = y), by = "to")
 
+    edge_range <- range(edges$jaccard, na.rm = TRUE)
+    if (!is.finite(edge_range[1]) || edge_range[1] == edge_range[2]) {
+      edge_width <- rep(4, nrow(edges_plot))
+    } else {
+      edge_width <- scales::rescale(edges_plot$jaccard, to = c(1, 8), from = edge_range)
+    }
+
+    node_range <- range(nodes$size, na.rm = TRUE)
+    if (!is.finite(node_range[1]) || node_range[1] == node_range[2]) {
+      node_size <- rep(26, nrow(nodes))
+    } else {
+      node_size <- scales::rescale(nodes$size, to = c(16, 38), from = node_range)
+    }
+
     p <- plot_ly()
 
-    for (i in seq_len(nrow(edges))) {
+    for (i in seq_len(nrow(edges_plot))) {
       p <- add_trace(
         p,
-        x = c(edges$x_from[i], edges$x_to[i]),
-        y = c(edges$y_from[i], edges$y_to[i]),
+        x = c(edges_plot$x_from[i], edges_plot$x_to[i]),
+        y = c(edges_plot$y_from[i], edges_plot$y_to[i]),
         type = "scatter",
         mode = "lines",
-        line = list(width = max(1.2, min(9, edges$weight[i] / 2)), color = "rgba(18,57,91,0.25)"),
+        line = list(width = edge_width[i], color = "rgba(18,57,91,0.25)"),
         hoverinfo = "text",
-        text = paste0(edges$from[i], " – ", edges$to[i], "<br>", edges$weight[i], " shared initiatives"),
+        text = paste0(
+          edges_plot$from[i], " – ", edges_plot$to[i],
+          "<br>", edges_plot$cooc[i], " shared initiatives",
+          "<br>Jaccard: ", round(edges_plot$jaccard[i], 2)
+        ),
         showlegend = FALSE
       )
     }
@@ -2805,13 +3347,13 @@ server <- function(input, output, session) {
       textposition = "top center",
       textfont = list(size = 10, color = "#596773"),
       marker = list(
-        size = ~scales::rescale(size, to = c(16, 38)),
+        size = node_size,
         color = "#1E7890",
         opacity = 0.92,
         line = list(color = "white", width = 2)
       ),
       hoverinfo = "text",
-      hovertext = ~paste0(dimension, "<br>", size, " records"),
+      hovertext = ~paste0(dimension, "<br>", size, " initiatives"),
       showlegend = FALSE
     )
 
@@ -2829,19 +3371,29 @@ server <- function(input, output, session) {
     validate(need(nrow(edges) > 0, "No co-occurrences for current selection."))
 
     df <- edges |>
-      bind_rows(edges |> transmute(from = to, to = from, weight = weight))
-
-    df <- df |>
+      select(from, to, cooc, jaccard) |>
+      bind_rows(edges |> transmute(from = to, to = from, cooc = cooc, jaccard = jaccard)) |>
       mutate(
         from_label = stringr::str_wrap(from, 28),
         to_label = stringr::str_wrap(to, 28)
       )
 
-    p <- ggplot(df, aes(x = from_label, y = to_label, fill = weight,
-                        text = paste0(from, " – ", to, "<br>", weight, " shared initiatives"))) +
+    p <- ggplot(
+      df,
+      aes(
+        x = from_label,
+        y = to_label,
+        fill = jaccard,
+        text = paste0(
+          from, " – ", to,
+          "<br>", cooc, " shared initiatives",
+          "<br>Jaccard: ", round(jaccard, 2)
+        )
+      )
+    ) +
       geom_tile(color = "white", linewidth = 0.45) +
       scale_fill_gradient(low = "#EEF3F7", high = "#12395B") +
-      labs(x = NULL, y = NULL, fill = "Shared") +
+      labs(x = NULL, y = NULL, fill = "Jaccard") +
       theme_minimal(base_size = 10) +
       theme(
         axis.text.x = element_text(angle = 35, hjust = 1),
@@ -3152,7 +3704,7 @@ server <- function(input, output, session) {
       select(initiative_id, non_profit, community_led, open_source_tools, multilingual, global_south_presence) |>
       left_join(
         master_full |>
-          select(initiative_id, name, initiative_type, lead_actor_type, governance_type, country, region, website),
+          select(initiative_id, name, initiative_type, lead_actor_type, governance_type, funding_model, country, region, website),
         by = "initiative_id"
       ) |>
       mutate(
@@ -3160,6 +3712,7 @@ server <- function(input, output, session) {
         initiative_type = normalise_empty(initiative_type),
         lead_actor_type = normalise_empty(lead_actor_type),
         governance_type = normalise_empty(governance_type),
+        funding_model = normalise_empty(funding_model),
         country = normalise_empty(country),
         region = normalise_empty(region),
         non_profit = normalise_flag(non_profit),
@@ -3217,6 +3770,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "gov_country", selected = "All")
     updateSelectInput(session, "gov_type", selected = "All")
     updateSelectInput(session, "gov_indicator", selected = "All")
+    updateSelectInput(session, "gov_flow_marker", selected = "All positive markers")
+    updateSliderInput(session, "gov_flow_min", value = 3)
   })
 
   governance_long <- reactive({
@@ -3264,6 +3819,165 @@ server <- function(input, output, session) {
   output$gov_kpi_global_south <- renderUI({
     pct <- mean(governance_filtered()$global_south_yes, na.rm = TRUE)
     render_kpi(ifelse(is.nan(pct), "—", percent(pct, accuracy = 1)), "Global South", "Presence / inclusion")
+  })
+
+
+  governance_flow_data <- reactive({
+    df <- governance_filtered() |>
+      mutate(
+        governance_family = dplyr::case_when(
+          stringr::str_detect(stringr::str_to_lower(governance_type), "community") ~ "Community-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "non.?profit|foundation") ~ "Non-profit-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "public|government|institution") ~ "Public-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "academic|scholarly|university") ~ "Academic-led",
+          stringr::str_detect(stringr::str_to_lower(governance_type), "commercial|publisher|company") ~ "Commercial-led",
+          TRUE ~ "Other / mixed"
+        ),
+        funding_group = dplyr::case_when(
+          stringr::str_detect(stringr::str_to_lower(funding_model), "grant|philanthropic|foundation") ~ "Grant / philanthropic",
+          stringr::str_detect(stringr::str_to_lower(funding_model), "public|institution") ~ "Public / institutional",
+          stringr::str_detect(stringr::str_to_lower(funding_model), "member") ~ "Membership",
+          stringr::str_detect(stringr::str_to_lower(funding_model), "commercial|service|revenue") ~ "Commercial / service revenue",
+          stringr::str_detect(stringr::str_to_lower(funding_model), "community|in.?kind|volunteer") ~ "Community / in-kind",
+          TRUE ~ "Other / mixed"
+        )
+      ) |>
+      select(
+        initiative_id, lead_actor_type, governance_family, funding_group,
+        community_led, non_profit, open_source_tools, multilingual, global_south_yes
+      ) |>
+      mutate(
+        across(c(community_led, non_profit, open_source_tools, multilingual, global_south_yes), as.character)
+      ) |>
+      pivot_longer(
+        c(community_led, non_profit, open_source_tools, multilingual, global_south_yes),
+        names_to = "inclusion_marker",
+        values_to = "marker_value"
+      ) |>
+      mutate(
+        inclusion_marker = dplyr::recode(
+          inclusion_marker,
+          "community_led" = "Community-led",
+          "non_profit" = "Non-profit",
+          "open_source_tools" = "Open-source tools",
+          "multilingual" = "Multilingual",
+          "global_south_yes" = "Global South presence"
+        ),
+        marker_yes = marker_value %in% c("Yes", "TRUE", "true", "1")
+      ) |>
+      filter(marker_yes)
+
+    if (!is.null(input$gov_flow_marker) && input$gov_flow_marker != "All positive markers") {
+      df <- df |> filter(inclusion_marker == input$gov_flow_marker)
+    }
+
+    df |>
+      count(inclusion_marker, governance_family, funding_group, name = "n") |>
+      filter(n >= (input$gov_flow_min %||% 3)) |>
+      arrange(desc(n))
+  })
+
+  output$governance_inclusion_flow <- renderPlotly({
+    df <- governance_flow_data()
+    validate(need(nrow(df) > 0, "No inclusion/governance/funding path at this threshold. Lower the minimum flow size."))
+
+    node_labels <- unique(c(
+      paste0("Inclusion: ", df$inclusion_marker),
+      paste0("Governance: ", df$governance_family),
+      paste0("Funding: ", df$funding_group)
+    ))
+
+    node_index <- setNames(seq_along(node_labels) - 1, node_labels)
+
+    links_1 <- df |>
+      transmute(
+        inclusion_marker,
+        source_label = paste0("Inclusion: ", inclusion_marker),
+        target_label = paste0("Governance: ", governance_family),
+        value = n,
+        text = paste0(inclusion_marker, " → ", governance_family, "<br>", n, " marker occurrences")
+      )
+
+    links_2 <- df |>
+      transmute(
+        inclusion_marker,
+        source_label = paste0("Governance: ", governance_family),
+        target_label = paste0("Funding: ", funding_group),
+        value = n,
+        text = paste0(inclusion_marker, "<br>", governance_family, " → ", funding_group, "<br>", n, " marker occurrences")
+      )
+
+    links <- bind_rows(links_1, links_2) |>
+      mutate(
+        source = unname(node_index[source_label]),
+        target = unname(node_index[target_label])
+      )
+
+    clean_node_labels <- stringr::str_replace(node_labels, "^(Inclusion|Governance|Funding): ", "")
+    node_stage <- dplyr::case_when(
+      stringr::str_starts(node_labels, "Inclusion:") ~ "Inclusion marker",
+      stringr::str_starts(node_labels, "Governance:") ~ "Governance family",
+      TRUE ~ "Funding model"
+    )
+
+    marker_cols <- c(
+      "Community-led" = "#66C2B8",
+      "Global South presence" = "#E9A384",
+      "Multilingual" = "#F2C99B",
+      "Non-profit" = "#A891C7",
+      "Open-source tools" = "#5B9AAA"
+    )
+    marker_link_cols <- c(
+      "Community-led" = "rgba(102, 194, 184, 0.42)",
+      "Global South presence" = "rgba(233, 163, 132, 0.42)",
+      "Multilingual" = "rgba(242, 201, 155, 0.50)",
+      "Non-profit" = "rgba(168, 145, 199, 0.45)",
+      "Open-source tools" = "rgba(91, 154, 170, 0.45)"
+    )
+    link_colors <- unname(marker_link_cols[links$inclusion_marker])
+    link_colors[is.na(link_colors)] <- "rgba(42, 174, 159, 0.35)"
+
+    node_colors <- dplyr::case_when(
+      clean_node_labels %in% names(marker_cols) ~ unname(marker_cols[clean_node_labels]),
+      node_stage == "Governance family" ~ "#EAF1F5",
+      TRUE ~ "#F1F6F8"
+    )
+
+    plot_ly(
+      type = "sankey",
+      arrangement = "snap",
+      node = list(
+        label = clean_node_labels,
+        color = node_colors,
+        pad = 16,
+        thickness = 18,
+        line = list(color = "#BFD7E6", width = 1),
+        hovertemplate = paste0("<b>%{label}</b><br>", node_stage, "<extra></extra>")
+      ),
+      link = list(
+        source = links$source,
+        target = links$target,
+        value = links$value,
+        color = link_colors,
+        customdata = links$text,
+        hovertemplate = "%{customdata}<extra></extra>"
+      )
+    ) |>
+      layout(
+        title = list(
+          text = "Where inclusion markers appear in governance and funding models",
+          x = 0.01,
+          font = list(size = 17)
+        ),
+        font = list(size = 12, color = "#12395B"),
+        margin = list(l = 20, r = 20, t = 60, b = 20),
+        annotations = list(
+          list(x = 0.01, y = -0.04, text = "Inclusion marker", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = 12, color = "#12395B")),
+          list(x = 0.50, y = -0.04, text = "Governance family", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = 12, color = "#12395B")),
+          list(x = 0.98, y = -0.04, text = "Funding model", showarrow = FALSE, xref = "paper", yref = "paper", font = list(size = 12, color = "#12395B"))
+        )
+      ) |>
+      plotly_cosmi_config()
   })
 
   output$inclusion_region_matrix <- renderPlotly({
