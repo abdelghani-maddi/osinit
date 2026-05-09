@@ -1,5 +1,5 @@
 # ============================================================
-# COSMI Hub V2.18 — Community Open Science Mapping Initiatives Hub
+# COSMI Hub V2.19 — Community Open Science Mapping Initiatives Hub
 # ============================================================
 #
 # Purpose
@@ -1369,6 +1369,56 @@ ui <- page_navbar(
         font-size: 0.66rem;
       }
 
+
+      .territory-radars-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .radar-control-strip {
+        display: grid;
+        grid-template-columns: minmax(230px, 1fr) minmax(320px, 1.45fr) auto;
+        align-items: end;
+        gap: 18px;
+        padding: 14px 16px 8px 16px;
+        margin-bottom: 8px;
+        border-radius: 18px;
+        background: #F7FAFC;
+        border: 1px solid #E3ECF3;
+      }
+
+      .radar-control-strip .form-group,
+      .radar-control-strip .shiny-input-container {
+        width: 100% !important;
+        margin-bottom: 0 !important;
+      }
+
+      .radar-control-check {
+        padding-bottom: 8px;
+        white-space: nowrap;
+      }
+
+      .radar-control-check .checkbox {
+        margin-bottom: 0;
+      }
+
+      .radar-plot-wrap {
+        padding: 0 4px;
+      }
+
+      @media (max-width: 1050px) {
+        .radar-control-strip {
+          grid-template-columns: 1fr;
+          align-items: stretch;
+        }
+        .radar-control-check {
+          padding-bottom: 0;
+          white-space: normal;
+        }
+      }
+
       @media (max-width: 1180px) {
         .navbar-data-tools .data-status-chip { display: none; }
         .brand-data-tools .data-status-chip { display: inline-flex; }
@@ -1548,6 +1598,65 @@ ui <- page_navbar(
             uiOutput("territory_kpi_countries"),
             uiOutput("territory_kpi_community"),
             uiOutput("territory_kpi_nonprofit")
+          ),
+          div(
+            class = "territory-radars-stack",
+            card(
+              class = "cosmi-card",
+              card_header("Country specialisation profile"),
+              card_body(
+                div(
+                  class = "radar-control-strip",
+                  div(
+                    selectInput(
+                      "radar_country", "Country",
+                      choices = safe_distinct_values(master_full$country[master_full$country != "Unknown"]),
+                      selected = safe_distinct_values(master_full$country[master_full$country != "Unknown"])[1]
+                    )
+                  ),
+                  div(
+                    sliderInput("radar_country_min_n", "Minimum initiatives in country", min = 1, max = 30, value = 5, step = 1)
+                  ),
+                  div(
+                    class = "radar-control-check",
+                    checkboxInput("radar_country_cap", "Cap ratios at 3", value = TRUE)
+                  )
+                ),
+                div(
+                  class = "radar-plot-wrap",
+                  plotlyOutput("country_specialisation_radar", height = 560)
+                ),
+                tags$p(class = "plot-note small-note", "The radar compares the selected country with the full dataset. A value of 1 means that an initiative type has the same weight as in COSMI Hub overall; values above 1 indicate relative over-representation.")
+              )
+            ),
+            card(
+              class = "cosmi-card",
+              card_header("Regional specialisation profile"),
+              card_body(
+                div(
+                  class = "radar-control-strip",
+                  div(
+                    selectInput(
+                      "radar_region", "Region",
+                      choices = safe_distinct_values(master_full$region[master_full$region != "Unknown"]),
+                      selected = safe_distinct_values(master_full$region[master_full$region != "Unknown"])[1]
+                    )
+                  ),
+                  div(
+                    sliderInput("radar_region_min_n", "Minimum initiatives in region", min = 1, max = 80, value = 10, step = 1)
+                  ),
+                  div(
+                    class = "radar-control-check",
+                    checkboxInput("radar_region_cap", "Cap ratios at 3", value = TRUE)
+                  )
+                ),
+                div(
+                  class = "radar-plot-wrap",
+                  plotlyOutput("region_specialisation_radar", height = 560)
+                ),
+                tags$p(class = "plot-note small-note", "The same relative profile is calculated for regions. It helps distinguish volume effects from distinctive regional mixes of initiative types.")
+              )
+            )
           ),
           plot_card(
             "Regional volume by initiative type",
@@ -2374,6 +2483,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "territory_country", selected = "All")
     updateSelectInput(session, "territory_type", selected = "All")
     updateSelectInput(session, "territory_actor", selected = "All")
+    updateSelectInput(session, "radar_country", selected = safe_distinct_values(master_full$country[master_full$country != "Unknown"])[1])
+    updateSelectInput(session, "radar_region", selected = safe_distinct_values(master_full$region[master_full$region != "Unknown"])[1])
   })
 
   observeEvent(input$territory_region, {
@@ -2382,6 +2493,177 @@ server <- function(input, output, session) {
       df <- df |> filter(region == input$territory_region)
     }
     updateSelectInput(session, "territory_country", choices = c("All", safe_distinct_values(df$country)), selected = "All")
+  })
+
+
+  observe({
+    req(input$radar_country_min_n)
+    country_choices <- master_full |>
+      filter(!is.na(country), country != "Unknown") |>
+      count(country, name = "n") |>
+      filter(n >= input$radar_country_min_n) |>
+      arrange(country) |>
+      pull(country)
+
+    if (length(country_choices) == 0) {
+      country_choices <- safe_distinct_values(master_full$country[master_full$country != "Unknown"])
+    }
+
+    current <- isolate(input$radar_country)
+    selected <- if (!is.null(current) && current %in% country_choices) current else country_choices[1]
+    updateSelectInput(session, "radar_country", choices = country_choices, selected = selected)
+  })
+
+  observe({
+    req(input$radar_region_min_n)
+    region_choices <- master_full |>
+      filter(!is.na(region), region != "Unknown") |>
+      count(region, name = "n") |>
+      filter(n >= input$radar_region_min_n) |>
+      arrange(region) |>
+      pull(region)
+
+    if (length(region_choices) == 0) {
+      region_choices <- safe_distinct_values(master_full$region[master_full$region != "Unknown"])
+    }
+
+    current <- isolate(input$radar_region)
+    selected <- if (!is.null(current) && current %in% region_choices) current else region_choices[1]
+    updateSelectInput(session, "radar_region", choices = region_choices, selected = selected)
+  })
+
+  make_specialisation_profile <- function(level_col, selected_value, min_n = 5) {
+    level_col <- rlang::ensym(level_col)
+
+    global <- master_full |>
+      filter(initiative_type != "Unknown") |>
+      count(initiative_type, name = "global_n") |>
+      mutate(global_share = global_n / sum(global_n))
+
+    local <- master_full |>
+      filter(!!level_col == selected_value, initiative_type != "Unknown") |>
+      count(initiative_type, name = "local_n") |>
+      mutate(local_total = sum(local_n), local_share = local_n / local_total)
+
+    out <- global |>
+      select(initiative_type, global_share) |>
+      left_join(local, by = "initiative_type") |>
+      mutate(
+        local_n = tidyr::replace_na(local_n, 0L),
+        local_total = tidyr::replace_na(local_total, 0L),
+        local_share = tidyr::replace_na(local_share, 0),
+        ratio = dplyr::if_else(global_share > 0, local_share / global_share, NA_real_),
+        enough_data = local_total >= min_n
+      ) |>
+      arrange(initiative_type)
+
+    out
+  }
+
+  specialisation_radar_plot <- function(df, title, cap = 3) {
+    total_n <- max(df$local_total, na.rm = TRUE)
+    enough <- isTRUE(df$enough_data[1])
+    df <- df |>
+      mutate(
+        ratio_display = pmin(ratio, cap),
+        hover = paste0(
+          initiative_type,
+          "<br>Relative ratio: ", round(ratio, 2),
+          "<br>Local share: ", scales::percent(local_share, accuracy = 0.1),
+          "<br>Dataset share: ", scales::percent(global_share, accuracy = 0.1),
+          "<br>Local records: ", local_n
+        )
+      )
+
+    if (nrow(df) > 0) {
+      df_closed <- bind_rows(df, df[1, ])
+      ref_closed <- df_closed |> mutate(ratio_display = 1, hover = "Dataset average")
+    } else {
+      df_closed <- df
+      ref_closed <- df
+    }
+
+    p <- plot_ly() |>
+      add_trace(
+        data = ref_closed,
+        type = "scatterpolar",
+        mode = "lines",
+        r = ~ratio_display,
+        theta = ~initiative_type,
+        name = "Dataset average",
+        line = list(color = "rgba(18,57,91,0.38)", width = 2, dash = "dot"),
+        hoverinfo = "skip",
+        showlegend = TRUE
+      ) |>
+      add_trace(
+        data = df_closed,
+        type = "scatterpolar",
+        mode = "lines+markers",
+        r = ~ratio_display,
+        theta = ~initiative_type,
+        text = ~hover,
+        hovertemplate = "%{text}<extra></extra>",
+        name = title,
+        fill = "toself",
+        line = list(color = "#1C7890", width = 3),
+        marker = list(color = "#2AAE9F", size = 7),
+        fillcolor = "rgba(42,174,159,0.25)",
+        showlegend = TRUE
+      ) |>
+      layout(
+        title = list(text = paste0(title, " <span style='font-size:12px;color:#637387'>(n = ", total_n, ")</span>"), x = 0.02),
+        polar = list(
+          domain = list(x = c(0.10, 0.90), y = c(0.12, 0.92)),
+          radialaxis = list(
+            visible = TRUE,
+            range = c(0, cap),
+            tickvals = c(0, 1, 2, cap),
+            ticktext = c("0", "1", "2", paste0(cap, "+")),
+            gridcolor = "#DDE6EE",
+            linecolor = "#DDE6EE",
+            tickfont = list(size = 11)
+          ),
+          angularaxis = list(
+            gridcolor = "#E7EDF3",
+            linecolor = "#DDE6EE",
+            tickfont = list(size = 12)
+          )
+        ),
+        margin = list(l = 110, r = 110, t = 85, b = 70),
+        font = list(color = "#12395B", size = 12),
+        legend = list(orientation = "h", x = 0.02, y = -0.12)
+      ) |>
+      plotly_cosmi_config()
+
+    # if (!enough) {
+    #   p <- p |>
+    #     layout(
+    #       annotations = list(list(
+    #         text = "Low number of records; interpret with caution.",
+    #         x = 0.02, y = 0.98,
+    #         xref = "paper", yref = "paper",
+    #         xanchor = "left",
+    #         yanchor = "top",
+    #         showarrow = FALSE,
+    #         font = list(size = 11, color = "#9A6B00")
+    #       ))
+    #     )
+    # }
+    p
+  }
+
+  output$country_specialisation_radar <- renderPlotly({
+    req(input$radar_country)
+    df <- make_specialisation_profile(country, input$radar_country, input$radar_country_min_n %||% 5)
+    cap_value <- if (isTRUE(input$radar_country_cap)) 3 else max(3, ceiling(max(df$ratio, na.rm = TRUE)))
+    specialisation_radar_plot(df, input$radar_country, cap_value)
+  })
+
+  output$region_specialisation_radar <- renderPlotly({
+    req(input$radar_region)
+    df <- make_specialisation_profile(region, input$radar_region, input$radar_region_min_n %||% 10)
+    cap_value <- if (isTRUE(input$radar_region_cap)) 3 else max(3, ceiling(max(df$ratio, na.rm = TRUE)))
+    specialisation_radar_plot(df, paste0(input$radar_region, " (regional)"), cap_value)
   })
 
   output$territory_kpi_n <- renderUI({
