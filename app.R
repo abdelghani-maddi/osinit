@@ -87,6 +87,21 @@ library(igraph)
 # Raise the Shiny upload limit for potential local datasets.
 options(shiny.maxRequestSize = 50 * 1024^2)
 
+# CARTO raster basemaps require an API key. Configure this secret in the
+# deployment environment; never commit the key to this public repository.
+carto_basemaps_api_key <- Sys.getenv("CARTO_BASEMAPS_API_KEY", unset = "")
+if (!nzchar(carto_basemaps_api_key)) {
+  warning("CARTO_BASEMAPS_API_KEY is not configured; CARTO tiles may display a watermark.")
+}
+carto_positron_tile_url <- paste0(
+  "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=",
+  utils::URLencode(carto_basemaps_api_key, reserved = TRUE)
+)
+carto_attribution <- paste0(
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ',
+  '&copy; <a href="https://carto.com/attributions">CARTO</a>'
+)
+
 # ---- 02. Helper functions ----
 # Reusable cleaning, normalisation and counting utilities.
 `%||%` <- function(x, y) if (is.null(x) || length(x) == 0) y else x
@@ -2228,9 +2243,10 @@ server <- function(input, output, session) {
         worldCopyJump = FALSE
       )
     ) |>
-      addProviderTiles(
-        providers$CartoDB.Positron,
-        options = providerTileOptions(noWrap = TRUE)
+      addTiles(
+        urlTemplate = carto_positron_tile_url,
+        attribution = carto_attribution,
+        options = tileOptions(noWrap = TRUE)
       ) |>
       setView(lng = 10, lat = 25, zoom = 2) |>
       addCircleMarkers(
